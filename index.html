@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
-<title>Cartoon Shooter 2D – Vorschau + Shop (Offline)</title>
+<title>Cartoon Shooter 2D – Startauswahl + Shop (Offline)</title>
 <style>
   html,body{margin:0;height:100%;background:#0e0f12;font-family:system-ui,Segoe UI,Roboto,Arial;overflow:hidden}
   #wrap{position:relative;width:100vw;height:100vh}
@@ -33,20 +33,20 @@
   .card{background:#171b25;border:1px solid #263049;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
   .badge{font-size:11px;background:#263049;border:1px solid #2f3a57;padding:2px 6px;border-radius:999px;display:inline-block}
   .row2{display:flex;justify-content:space-between;align-items:center}
-  .btn{padding:6px 10px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer;touch-action:manipulation}
   .btn[disabled]{opacity:.5;cursor:not-allowed}
   .closeX{position:absolute;right:14px;top:8px;font-size:22px;line-height:1;cursor:pointer;opacity:.8}
   .desc{font-size:12px;opacity:.9}
   /* Start/Vorschau */
-  .start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:8;color:#fff;text-align:center;padding:16px}
-  .start .box{background:#0f1420;border:1px solid #22304a;border-radius:16px;padding:18px 22px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-  .start h1{margin:0 0 6px;font-size:28px}
+  .start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:8;color:#fff;text-align:center;padding:16px;pointer-events:auto}
+  .start .box{background:#0f1420;border:1px solid #22304a;border-radius:16px;padding:18px 22px;box-shadow:0 10px 40px rgba(0,0,0,.5);min-width:min(560px,92vw)}
+  .start h1{margin:0 0 8px;font-size:28px}
   .start p{margin:6px 0 12px;opacity:.9}
-  .start .actions{display:flex;gap:10px;justify-content:center}
-  .start .btn{padding:10px 14px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer}
+  .start .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .select{padding:8px 10px;border-radius:10px;border:1px solid #33415e;background:#0b1220;color:#fff}
   /* iPhone Rotate Hint */
   #rotateHint{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.8);color:#fff;z-index:9999;text-align:center;padding:24px}
-  #rotateHint .btn{padding:10px 14px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer;margin-top:12px}
+  #rotateHint .btn{margin-top:12px}
 </style>
 </head>
 <body>
@@ -62,15 +62,28 @@
     </div>
   </div>
 
-  <!-- Start/Vorschau -->
+  <!-- Start/Vorschau mit Waffenauswahl -->
   <div id="start" class="start">
     <div class="box">
-      <h1>Mini Shooter – Vorschau</h1>
+      <h1>Mini Shooter – Start</h1>
       <p>WASD/Joystick bewegen • Klick/Fire schießen • <b>B</b> = Shop</p>
-      <div class="actions">
-        <button id="playBtn" class="btn">Spielen</button>
-        <button id="openShopBtn" class="btn">Shop ansehen</button>
+      <div class="row" style="margin-bottom:10px">
+        <label for="weaponSelect">Startwaffe:&nbsp;</label>
+        <select id="weaponSelect" class="select">
+          <option value="pistol">Pistol (Standard)</option>
+          <option value="smg">SMG</option>
+          <option value="shotgun">Shotgun</option>
+          <option value="sniper">Sniper</option>
+          <option value="freeze">Freeze</option>
+          <option value="boomer">Boomerang</option>
+          <option value="rocket">Rocket</option>
+        </select>
       </div>
+      <div class="row">
+        <button id="playBtn" class="btn">Spielen</button>
+        <button id="openShopBtn" class="btn">Shop öffnen</button>
+      </div>
+      <div style="margin-top:8px;font-size:12px;opacity:.8">Hinweis: Nicht gekaufte Waffen sind gesperrt – im Shop kaufen & dann hier auswählen.</div>
     </div>
   </div>
 
@@ -126,14 +139,15 @@
   window.addEventListener('resize',resize); resize();
 
   // ===== DOM Refs =====
-  const overlay   = document.getElementById('overlay');
-  const shopGrid  = document.getElementById('shopGrid');
-  const coinsShop = document.getElementById('coinsShop');
-  const startEl   = document.getElementById('start');
-  const playBtn   = document.getElementById('playBtn');
-  const openShopBtn = document.getElementById('openShopBtn');
-  const rotateHint= document.getElementById('rotateHint');
-  const fsBtn     = document.getElementById('fsBtn');
+  const overlay=document.getElementById('overlay');
+  const shopGrid=document.getElementById('shopGrid');
+  const coinsShop=document.getElementById('coinsShop');
+  const startEl=document.getElementById('start');
+  const playBtn=document.getElementById('playBtn');
+  const openShopBtn=document.getElementById('openShopBtn');
+  const weaponSelect=document.getElementById('weaponSelect');
+  const rotateHint=document.getElementById('rotateHint');
+  const fsBtn=document.getElementById('fsBtn');
   document.getElementById('closeShop').onclick=()=>toggleShop(false);
   overlay.addEventListener('click',e=>{ if(e.target===overlay) toggleShop(false); });
 
@@ -206,9 +220,14 @@
       t:0,
       player:{x:K.worldW/2,y:K.worldH/2,r:16,hp:K.maxHP,facing:0,fireCD:0,weapon:'pistol'},
       bullets:[], enemies:[], drops:[], booms:[], rockets:[], explosions:[],
-      score:0, wave:1, nextSpawn:0, gameOver:false, camera:{x:0,y:0}, coins:0,
+      score:0, wave:1, nextSpawn:0, gameOver:false, camera:{x:0,y:0}, coins:50, // 50 Test-Coins
       owned:new Set(['pistol'])
     };
+    // Startwaffe (wenn nicht owned → bleibt pistol)
+    const want = (weaponSelect?.value)||'pistol';
+    if(want && want!=='pistol' && WEAPONS.some(w=>w.id===want) && state.owned.has(want)) {
+      state.player.weapon = want;
+    }
     centerCameraImmediate();
     for(let i=0;i<3;i++) spawnEnemy();
     state.enemies.push({x:state.player.x+120,y:state.player.y+60,r:14,hp:32,spd:90,slowT:0});
@@ -216,9 +235,16 @@
   }
   resetGame();
 
-  // ===== Start/Vorschau =====
-  playBtn.onclick=()=>{ startEl.style.display='none'; };
-  openShopBtn.onclick=()=>{ startEl.style.display='none'; toggleShop(true); };
+  // ===== Start/Vorschau Verhalten =====
+  function closeStart(){
+    if(startEl) startEl.style.display='none';
+    // wenn Startwaffe im Dropdown gewählt und gekauft → setzen
+    const chosen = weaponSelect?.value || 'pistol';
+    if(state.owned.has(chosen)) state.player.weapon=chosen;
+    updateHUD();
+  }
+  playBtn.onclick=()=>{ closeStart(); };
+  openShopBtn.onclick=()=>{ closeStart(); toggleShop(true); };
 
   // ===== Shop UI =====
   function toggleShop(on){
@@ -239,7 +265,10 @@
       const btn=document.createElement('button'); btn.className='btn';
       if(!owned){
         btn.textContent='Kaufen'; btn.disabled=state.coins<w.price;
-        btn.onclick=()=>{ if(state.coins>=w.price){ state.coins-=w.price; state.owned.add(w.id); updateHUD(); renderShop(); } };
+        btn.onclick=()=>{ if(state.coins>=w.price){ state.coins-=w.price; state.owned.add(w.id); updateHUD(); renderShop();
+          // Dropdown sofort freischalten
+          [...weaponSelect.options].forEach(o=>o.disabled=!state.owned.has(o.value) && o.value!=='pistol');
+        } };
       }else{
         btn.textContent=equipped?'Aktiv':'Ausrüsten';
         btn.onclick=()=>{ state.player.weapon=w.id; updateHUD(); renderShop(); };
@@ -247,6 +276,13 @@
       row.append(price,btn); el.append(title,desc,row); shopGrid.appendChild(el);
     }
   }
+  // Dropdown-Optionen sperren, wenn nicht owned
+  function refreshSelectLock(){
+    [...weaponSelect.options].forEach(o=>{
+      o.disabled = (o.value!=='pistol' && !state.owned.has(o.value));
+    });
+  }
+  refreshSelectLock();
 
   // ===== Mechanics =====
   function shoot(s,wx,wy,dmg,spread=0,slow=0,pierce=false){
@@ -505,9 +541,7 @@
           try{ await screen.orientation.lock('landscape-primary'); }catch(e){}
           try{ await screen.orientation.lock('landscape'); }catch(e){}
         }
-      }finally{
-        setTimeout(applyRotateHint,200);
-      }
+      }finally{ setTimeout(applyRotateHint,200); }
     }
     fsBtn?.addEventListener('click', tryFullscreenLock);
     window.addEventListener('orientationchange', ()=>setTimeout(applyRotateHint,100));
