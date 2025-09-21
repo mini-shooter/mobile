@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
-<title>Mini Shooter – BS Controls (ohne Aim-Assist)</title>
+<title>Mini Shooter – BS Controls + Speicher (Fix)</title>
 <style>
   html,body{margin:0;height:100%;background:#0e0f12;font-family:system-ui,Segoe UI,Roboto,Arial;overflow:hidden}
   #wrap{position:relative;width:100vw;height:100vh}
@@ -23,14 +23,16 @@
 
   /* Shop Overlay */
   .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:10}
-  .shop{width:min(820px,94vw);max-height:86vh;overflow:auto;background:#10151f;border:1px solid #283041;border-radius:16px;color:#fff;padding:14px;position:relative}
+  .shop{width:min(860px,94vw);max-height:86vh;overflow:auto;background:#10151f;border:1px solid #283041;border-radius:16px;color:#fff;padding:14px;position:relative}
   .shop h2{margin:6px 0 10px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .grid.settings{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
   .card{background:#151b27;border:1px solid #27334a;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
   .badge{font-size:11px;background:#263049;padding:2px 6px;border-radius:999px}
   .btn{padding:8px 12px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer}
   .btn[disabled]{opacity:.55;cursor:not-allowed}
   .closeX{position:absolute;right:12px;top:8px;font-size:22px;cursor:pointer;opacity:.9}
+  .small{font-size:12px;opacity:.9}
 
   /* Mobile controls – zwei Sticks */
   .mobile{position:absolute;inset:0;pointer-events:none;z-index:9}
@@ -49,7 +51,7 @@
   <div class="hud">
     <div class="row" style="margin-bottom:8px;">
       <div class="pill">Score: <span id="score">0</span></div>
-      <div class="pill">Welle: <span id="wave">1</span></div>
+      <div class="pill">Highscore: <span id="best">0</span></div>
       <div class="pill">Waffe: <span id="weaponName">Pistol</span></div>
       <div class="pill">Coins: <span id="coins">0</span></div>
       <div class="pill">Shop: <b>B</b></div>
@@ -70,8 +72,10 @@
   <div class="overlay" id="overlay">
     <div class="shop">
       <div class="closeX" id="closeShop">✕</div>
-      <h2>🛒 Shop <span class="badge">Coins: <span id="coinsShop">0</span></span></h2>
+      <h2>🛒 Shop <span class="badge">Coins: <span id="coinsShop">0</span></span> <span class="badge">Highscore: <span id="bestShop">0</span></span></h2>
+      <div class="grid settings" id="settingsGrid"></div>
       <div class="grid" id="shopGrid"></div>
+      <p class="small">Mobil: linker Stick bewegen, rechter Stick ziehen & loslassen zum Schießen, kurzer Tap = Quick Fire. Gegner haben 1 HP.</p>
     </div>
   </div>
 
@@ -98,6 +102,7 @@ function resize(){canvas.width=innerWidth;canvas.height=innerHeight;} addEventLi
 
 /* ===== Config ===== */
 const K={worldW:2200,worldH:1400,playerSpeed:220,bulletSpeed:700,enemySpeed:95,spawnEvery:1.6,coinPerKill:1,playerMaxHP:3,enemyHP:1};
+const SAVE_KEY='miniShooterV1';
 
 /* ===== Input (PC) ===== */
 const keys=new Set();
@@ -129,7 +134,6 @@ function makeStick(el){
     const last={x:o.vec.x,y:o.vec.y};
     o.active=false; o.vec.x=0; o.vec.y=0;
     knob.style.transform='translate(-50%,-50%)';
-    // Beim Shoot-Stick: Loslassen = Schuss (BS-Style)
     if(el.id==='shootStick'){ handleShootRelease(last); }
   }
   el.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];start(t.clientX,t.clientY)},{passive:false});
@@ -142,61 +146,104 @@ const moveStick=makeStick(byId('moveStick'));
 const shootStick=makeStick(byId('shootStick'));
 byId('shopBtn').addEventListener('touchstart',e=>{e.preventDefault();toggleShop(true)},{passive:false});
 
-/* ===== Shop ===== */
+/* ===== Shop & Settings ===== */
 const WEAPONS=[
   {id:'pistol', name:'Pistol',  price:0,  rate:4, dmg:1, multi:1, spread:0},
   {id:'smg',    name:'SMG',     price:6,  rate:9, dmg:1, multi:1, spread:0.05},
   {id:'shotgun',name:'Shotgun', price:10, rate:2, dmg:1, multi:3, spread:0.18}
 ];
 const getW=id=>WEAPONS.find(w=>w.id===id);
-const overlay=byId('overlay'), shopGrid=byId('shopGrid'), coinsShop=byId('coinsShop');
+
+const overlay=byId('overlay'), shopGrid=byId('shopGrid'), coinsShop=byId('coinsShop'), bestShop=byId('bestShop'), settingsGrid=byId('settingsGrid');
 byId('closeShop').onclick=()=>toggleShop(false);
 overlay.addEventListener('click',e=>{if(e.target===overlay)toggleShop(false);});
-
 function toggleShop(on){ overlay.style.display=on?'flex':'none'; if(on) renderShop(); }
+
+function flashBtn(btn){ const old=btn.textContent; btn.textContent='✔'; setTimeout(()=>btn.textContent=old,700); }
+
 function renderShop(){
   coinsShop.textContent=S.coins;
+  bestShop.textContent=S.best|0;
+
+  // Speicher-Card
+  settingsGrid.innerHTML='';
+  const card=document.createElement('div'); card.className='card';
+  card.innerHTML=`
+    <div><b>⚙️ Speicher</b></div>
+    <div class="small">Speichert Coins, gekaufte Waffen, aktive Waffe & Highscore lokal.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="saveBtn">Speichern</button>
+      <button class="btn" id="loadBtn">Laden</button>
+      <button class="btn" id="resetBtn">Reset Speicher</button>
+    </div>`;
+  settingsGrid.appendChild(card);
+  card.querySelector('#saveBtn').onclick=()=>{ saveGame(); flashBtn(card.querySelector('#saveBtn')); };
+  card.querySelector('#loadBtn').onclick=()=>{ loadGame(true); flashBtn(card.querySelector('#loadBtn')); renderShop(); updateHUD(); };
+  card.querySelector('#resetBtn').onclick=()=>{ if(confirm('Speicher wirklich löschen?')){ clearSave(); flashBtn(card.querySelector('#resetBtn')); renderShop(); updateHUD(); } };
+
+  // Waffen
   shopGrid.innerHTML='';
   for(const w of WEAPONS){
     const owned=S.owned.has(w.id),active=S.p.weapon===w.id;
-    const card=document.createElement('div'); card.className='card';
-    card.innerHTML=`<div><b>${w.name}</b> ${owned?(active?'<span class="badge">Aktiv</span>':'<span class="badge">Gekauft</span>'):''}</div>
-                    <div class="badge">Preis: ${w.price}c</div>`;
+    const c=document.createElement('div'); c.className='card';
+    c.innerHTML=`<div><b>${w.name}</b> ${owned?(active?'<span class="badge">Aktiv</span>':'<span class="badge">Gekauft</span>'):''}</div>
+                 <div class="badge">Preis: ${w.price}c</div>`;
     const btn=document.createElement('button'); btn.className='btn';
     if(!owned){
       btn.textContent='Kaufen'; btn.disabled=S.coins<w.price;
-      btn.onclick=()=>{ if(S.coins>=w.price){ S.coins-=w.price; S.owned.add(w.id); renderShop(); updateHUD(); } };
+      btn.onclick=()=>{ if(S.coins>=w.price){ S.coins-=w.price; S.owned.add(w.id); updateHUD(); renderShop(); saveGame(); } };
     }else{
       btn.textContent=active?'Aktiv':'Ausrüsten';
-      btn.onclick=()=>{ S.p.weapon=w.id; renderShop(); updateHUD(); };
+      btn.onclick=()=>{ S.p.weapon=w.id; updateHUD(); renderShop(); saveGame(); };
     }
-    card.appendChild(btn); shopGrid.appendChild(card);
+    c.appendChild(btn); shopGrid.appendChild(c);
   }
 }
 
-/* ===== State ===== */
+/* ===== State + Speicher ===== */
 let S;
-function resetGame(){
-  S={
+function newRunBase(){
+  return {
     t:0, cam:{x:0,y:0},
     p:{x:K.worldW/2,y:K.worldH/2,hp:K.playerMaxHP,cd:0,weapon:'pistol'},
-    bullets:[], enemies:[], score:0, wave:1, nextSpawn:0, coins:0,
-    owned:new Set(['pistol']), over:false, hitCD:0
+    bullets:[], enemies:[], score:0, wave:1, nextSpawn:0,
+    coins:0, owned:new Set(['pistol']),
+    best:0, over:false, hitCD:0
   };
-  spawnEnemy(); spawnEnemy(); updateHUD(); byId('center').style.display='none';
 }
+function applyMetaFromSave(meta){
+  if(!meta) return;
+  S.coins = meta.coins ?? S.coins;
+  S.best  = meta.best ?? S.best;
+  S.p.weapon = meta.weapon ?? S.p.weapon;
+  if(Array.isArray(meta.owned)){ S.owned=new Set(meta.owned); if(!S.owned.has('pistol')) S.owned.add('pistol'); }
+}
+function resetGame(){
+  S=newRunBase();
+  const meta = loadMeta();
+  applyMetaFromSave(meta);
+  spawnEnemy(); spawnEnemy();
+  updateHUD(); byId('center').style.display='none';
+}
+function serializeMeta(){ return {version:1, coins:S.coins|0, best:S.best|0, weapon:S.p.weapon, owned:[...S.owned]}; }
+function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(serializeMeta())); }catch(e){} }
+function loadMeta(){ try{ const raw=localStorage.getItem(SAVE_KEY); if(!raw) return null; const obj=JSON.parse(raw); return (obj&&typeof obj==='object')?obj:null; }catch(e){ return null; } }
+function loadGame(applyNow=false){ const meta=loadMeta(); if(!meta) return false; if(applyNow) applyMetaFromSave(meta); return true; }
+function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
 resetGame();
+let autosaveT=0;
+addEventListener('beforeunload', saveGame);
 
 /* ===== Shooting ===== */
 function handleShootRelease(vec){
-  // Quick fire (Tap) = fast keine Richtung -> such nächsten Gegner
   const mag=Math.hypot(vec.x,vec.y);
   if(mag<0.3){
+    // Quick Fire: schießt Richtung nächster Gegner (nur ein Schuss, kein Tracking)
     let target=null,best=Infinity;
     for(const e of S.enemies){const d=(e.x-S.p.x)**2+(e.y-S.p.y)**2; if(d<best){best=d; target=e;}}
     if(target){ shootAt(target.x,target.y); }
   }else{
-    // Normales Schießen in Stick-Richtung
     const ang=Math.atan2(vec.y,vec.x);
     shootDir(ang);
   }
@@ -236,7 +283,6 @@ function spawnEnemy(){
 function update(dt){
   if(S.over) return;
   S.t+=dt;
-  if(S.hitCD>0) S.hitCD-=dt;
 
   // Movement
   let vx=0,vy=0;
@@ -248,9 +294,7 @@ function update(dt){
   S.p.y=clamp(S.p.y+vy*K.playerSpeed*dt,0,K.worldH);
 
   // PC Schießen (Maus)
-  if(mouse.down && S.p.cd<=0){
-    shootAt(S.cam.x+mouse.x, S.cam.y+mouse.y);
-  }
+  if(mouse.down && S.p.cd<=0){ shootAt(S.cam.x+mouse.x, S.cam.y+mouse.y); }
   if(S.p.cd>0) S.p.cd-=dt;
 
   // Bullets
@@ -264,6 +308,7 @@ function update(dt){
   }
 
   // Collisions bullet -> enemy
+  let killed=false;
   for(let i=S.enemies.length-1;i>=0;i--){
     const e=S.enemies[i];
     let dead=false;
@@ -276,20 +321,26 @@ function update(dt){
     }
     if(dead){
       S.enemies.splice(i,1);
-      S.score+=10; S.coins+=K.coinPerKill;
+      S.score+=10; S.coins+=K.coinPerKill; killed=true;
+    }
+  }
+  if(killed){ updateHUD(); autosaveKick(); }
+
+  // Enemy -> player (zuverlässiger Schaden + i-frames + Pushback)
+  if(S.hitCD>0) S.hitCD -= dt;
+  for(const e of S.enemies){
+    const dx=e.x-S.p.x, dy=e.y-S.p.y;
+    const d2 = dx*dx + dy*dy;
+    if(d2 < 32*32 && S.hitCD<=0){        // großzügigerer Radius = 32px
+      S.p.hp = Math.max(0, S.p.hp-1);    // 1 Herz
+      S.hitCD = 0.6;                     // 600ms Unverwundbarkeit
+      const d = Math.hypot(dx,dy)||1;    // Gegner wegstoßen
+      e.x += (dx/d)*40; e.y += (dy/d)*40;
     }
   }
 
-  // Enemy -> player (mit kurzer Unverwundbarkeit)
-  for(const e of S.enemies){
-    if((e.x-S.p.x)**2+(e.y-S.p.y)**2 < (16+14)*(16+14) && S.hitCD<=0){
-      S.p.hp=Math.max(0,S.p.hp-1);
-      S.hitCD=0.6; // 600ms i-frame
-      // kleiner Rückstoß
-      const dx=e.x-S.p.x, dy=e.y-S.p.y, d=Math.hypot(dx,dy)||1;
-      e.x+=dx/d*30; e.y+=dy/d*30;
-    }
-  }
+  // Highscore
+  if(S.score > S.best) S.best = S.score;
 
   // Spawning
   S.nextSpawn-=dt;
@@ -305,8 +356,16 @@ function update(dt){
   S.cam.x += (tx-S.cam.x)*0.18;
   S.cam.y += (ty-S.cam.y)*0.18;
 
+  // Autosave
+  autosaveT += dt;
+  if(autosaveT > 5){ saveGame(); autosaveT = 0; }
+
   updateHUD();
-  if(S.p.hp<=0){ S.over=true; byId('center').style.display='block'; }
+  if(S.p.hp<=0 && !S.over){
+    S.over=true;
+    byId('center').style.display='block';
+    saveGame();
+  }
 }
 
 /* ===== Draw ===== */
@@ -333,15 +392,12 @@ function draw(){
   g.fillStyle='#fde047';
   for(const b of S.bullets){ g.beginPath(); g.arc(b.x,b.y,4,0,Math.PI*2); g.fill(); }
 
-  // Schuss-Vorschau-Linie beim rechten Stick (nur mobile)
+  // Schuss-Vorschau beim rechten Stick (nur mobile, während Halten)
   if(isTouch && shootStick.active){
     const ang=Math.atan2(shootStick.vec.y, shootStick.vec.x);
     const len=110;
-    g.strokeStyle='#ffffff'; g.globalAlpha=.8; g.lineWidth=2;
-    g.beginPath();
-    g.moveTo(S.p.x, S.p.y);
-    g.lineTo(S.p.x + Math.cos(ang)*len, S.p.y + Math.sin(ang)*len);
-    g.stroke();
+    g.strokeStyle='#ffffff'; g.globalAlpha=.85; g.lineWidth=2;
+    g.beginPath(); g.moveTo(S.p.x, S.p.y); g.lineTo(S.p.x + Math.cos(ang)*len, S.p.y + Math.sin(ang)*len); g.stroke();
     g.globalAlpha=1;
   }
 
@@ -355,20 +411,25 @@ function draw(){
 /* ===== HUD ===== */
 function updateHUD(){
   byId('score').textContent=S.score|0;
-  byId('wave').textContent=S.wave|0;
+  byId('best').textContent=S.best|0;
   byId('coins').textContent=S.coins|0;
   byId('weaponName').textContent=getW(S.p.weapon).name;
   coinsShop.textContent=S.coins|0;
+  bestShop.textContent=S.best|0;
   const hearts=byId('hearts'); hearts.innerHTML='';
   for(let i=0;i<K.playerMaxHP;i++){
     const h=document.createElement('div'); h.className='heart'+(i<S.p.hp?'':' off'); hearts.appendChild(h);
   }
 }
+function autosaveKick(){ autosaveT = Math.min(autosaveT, 4.5); }
 
-/* ===== Loop ===== */
+/* ===== Loop & Restart Shortcuts ===== */
 let last=performance.now();
 function tick(now){ const dt=Math.min(.033,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(tick); }
 requestAnimationFrame(tick);
+
+// Neustart per Klick/Touch im Game-Over
+addEventListener('pointerdown', ()=>{ if(S.over) resetGame(); });
 
 })();
 </script>
