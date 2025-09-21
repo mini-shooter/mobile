@@ -2,90 +2,48 @@
 <html lang="de">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no"/>
-<title>Cartoon Shooter 2D – Startauswahl + Shop (Offline)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
+<title>Mini Shooter – BS Controls (ohne Aim-Assist)</title>
 <style>
   html,body{margin:0;height:100%;background:#0e0f12;font-family:system-ui,Segoe UI,Roboto,Arial;overflow:hidden}
   #wrap{position:relative;width:100vw;height:100vh}
-  canvas{position:absolute;inset:0;display:block;width:100vw;height:100vh;background:linear-gradient(#1b1e27,#12141a)}
+  canvas{position:absolute;inset:0;display:block;width:100vw;height:100vh;background:linear-gradient(#141925,#0d111a)}
+
   /* HUD */
-  .hud{position:absolute;left:12px;top:12px;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6);user-select:none;z-index:5}
-  .hud .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .hud{position:absolute;left:12px;top:12px;color:#fff;z-index:5;user-select:none}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   .pill{padding:4px 8px;border-radius:999px;background:#232633;border:1px solid #2d3246;font-size:12px}
-  .bar{width:180px;height:12px;background:#3a3f54;border-radius:8px;overflow:hidden;border:1px solid #222}
-  .bar>span{display:block;height:100%;background:#34d399;transition:width .15s}
-  .centerMsg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;text-align:center;pointer-events:none;z-index:5}
-  .centerMsg h1{margin:0 0 8px;font-size:42px;text-shadow:0 4px 18px rgba(0,0,0,.6)}
-  .centerMsg p{margin:0;font-size:16px;opacity:.9}
-  /* Mobile */
-  .mobile{position:absolute;inset:0;pointer-events:none;z-index:6}
-  .stick{position:absolute;left:20px;bottom:20px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);pointer-events:auto;touch-action:none}
-  .knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.2)}
-  .fire{position:absolute;right:24px;bottom:40px;width:90px;height:90px;border-radius:50%;background:rgba(255,100,100,.2);border:1px solid rgba(255,100,100,.4);pointer-events:auto;touch-action:none}
-  .fire:after{content:"FIRE";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;font-weight:700;letter-spacing:.5px}
-  .shopBtn{position:absolute;right:24px;bottom:150px;width:98px;height:48px;border-radius:12px;background:rgba(100,200,255,.15);border:1px solid rgba(100,200,255,.4);pointer-events:auto;touch-action:none;color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
-  .hint{position:absolute;right:16px;top:16px;color:#fff;opacity:.75;font-size:12px}
-  /* SHOP */
-  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;z-index:10}
-  .shop{width:min(920px,92vw);max-height:86vh;overflow:auto;background:#12141a;border:1px solid #2a3148;border-radius:16px;padding:16px;box-shadow:0 10px 40px rgba(0,0,0,.5);color:#fff;position:relative}
-  .shop h2{margin:.2em 0 .6em 0}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-  .card{background:#171b25;border:1px solid #263049;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px}
-  .badge{font-size:11px;background:#263049;border:1px solid #2f3a57;padding:2px 6px;border-radius:999px;display:inline-block}
-  .row2{display:flex;justify-content:space-between;align-items:center}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer;touch-action:manipulation}
-  .btn[disabled]{opacity:.5;cursor:not-allowed}
-  .closeX{position:absolute;right:14px;top:8px;font-size:22px;line-height:1;cursor:pointer;opacity:.8}
-  .desc{font-size:12px;opacity:.9}
-  /* Start/Vorschau */
-  .start{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.5);z-index:8;color:#fff;text-align:center;padding:16px;pointer-events:auto}
-  .start .box{background:#0f1420;border:1px solid #22304a;border-radius:16px;padding:18px 22px;box-shadow:0 10px 40px rgba(0,0,0,.5);min-width:min(560px,92vw)}
-  .start h1{margin:0 0 8px;font-size:28px}
-  .start p{margin:6px 0 12px;opacity:.9}
-  .start .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
-  .select{padding:8px 10px;border-radius:10px;border:1px solid #33415e;background:#0b1220;color:#fff}
-  /* iPhone Rotate Hint */
-  #rotateHint{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.8);color:#fff;z-index:9999;text-align:center;padding:24px}
-  #rotateHint .btn{margin-top:12px}
+  .hearts{display:flex;gap:6px}
+  .heart{width:18px;height:18px;background:#ef4444;clip-path:path("M8.8 3.2c.7-1.2 2.7-1.2 3.4 0 .6 1 .4 2.5-.6 3.3L10.5 7 9 6.5c-1-.8-1.2-2.3-.6-3.3z M3 7c0-2.2 1.6-4 3.6-4 1 0 1.9.5 2.5 1.2C9.6 3.5 10.5 3 11.5 3 13.5 3 15 4.8 15 7c0 3.6-6 8-6 8S3 10.6 3 7");opacity:.9}
+  .heart.off{background:#475569;opacity:.6}
+
+  /* Game over */
+  .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;text-align:center;z-index:6;display:none}
+  .center h1{margin:0 0 8px;font-size:40px}
+
+  /* Shop Overlay */
+  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:10}
+  .shop{width:min(820px,94vw);max-height:86vh;overflow:auto;background:#10151f;border:1px solid #283041;border-radius:16px;color:#fff;padding:14px;position:relative}
+  .shop h2{margin:6px 0 10px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+  .card{background:#151b27;border:1px solid #27334a;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+  .badge{font-size:11px;background:#263049;padding:2px 6px;border-radius:999px}
+  .btn{padding:8px 12px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer}
+  .btn[disabled]{opacity:.55;cursor:not-allowed}
+  .closeX{position:absolute;right:12px;top:8px;font-size:22px;cursor:pointer;opacity:.9}
+
+  /* Mobile controls – zwei Sticks */
+  .mobile{position:absolute;inset:0;pointer-events:none;z-index:9}
+  .stick{position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);pointer-events:auto;touch-action:none}
+  .knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.2)}
+  #moveStick{left:16px;bottom:16px}
+  #shootStick{right:16px;bottom:16px}
+  .shopBtn{position:absolute;right:24px;bottom:180px;width:110px;height:46px;border-radius:12px;background:rgba(120,180,255,.15);border:1px solid rgba(120,180,255,.4);pointer-events:auto;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
 <div id="wrap">
   <canvas id="game"></canvas>
-
-  <!-- iPhone Hinweis -->
-  <div id="rotateHint">
-    <div>
-      <div style="font-size:22px;font-weight:700;margin-bottom:8px">Bitte nach rechts drehen</div>
-      <div style="opacity:.9">Für iPhones: Querformat <b>(Landscape-Right)</b> nutzen.<br/>Optional unten Vollbild versuchen.</div>
-      <div><button id="fsBtn" class="btn">Vollbild versuchen</button></div>
-    </div>
-  </div>
-
-  <!-- Start/Vorschau mit Waffenauswahl -->
-  <div id="start" class="start">
-    <div class="box">
-      <h1>Mini Shooter – Start</h1>
-      <p>WASD/Joystick bewegen • Klick/Fire schießen • <b>B</b> = Shop</p>
-      <div class="row" style="margin-bottom:10px">
-        <label for="weaponSelect">Startwaffe:&nbsp;</label>
-        <select id="weaponSelect" class="select">
-          <option value="pistol">Pistol (Standard)</option>
-          <option value="smg">SMG</option>
-          <option value="shotgun">Shotgun</option>
-          <option value="sniper">Sniper</option>
-          <option value="freeze">Freeze</option>
-          <option value="boomer">Boomerang</option>
-          <option value="rocket">Rocket</option>
-        </select>
-      </div>
-      <div class="row">
-        <button id="playBtn" class="btn">Spielen</button>
-        <button id="openShopBtn" class="btn">Shop öffnen</button>
-      </div>
-      <div style="margin-top:8px;font-size:12px;opacity:.8">Hinweis: Nicht gekaufte Waffen sind gesperrt – im Shop kaufen & dann hier auswählen.</div>
-    </div>
-  </div>
 
   <!-- HUD -->
   <div class="hud">
@@ -94,460 +52,323 @@
       <div class="pill">Welle: <span id="wave">1</span></div>
       <div class="pill">Waffe: <span id="weaponName">Pistol</span></div>
       <div class="pill">Coins: <span id="coins">0</span></div>
-      <div class="pill">Munition: <span id="ammo">∞</span></div>
+      <div class="pill">Shop: <b>B</b></div>
     </div>
     <div class="row">
       <div class="pill">HP</div>
-      <div class="bar"><span id="hpFill" style="width:100%"></span></div>
-      <div class="pill" style="margin-left:8px;">Shop: <b>B</b></div>
+      <div class="hearts" id="hearts"></div>
     </div>
   </div>
 
   <!-- Game Over -->
-  <div class="centerMsg" id="center" style="display:none;">
+  <div class="center" id="center">
     <h1>Game Over</h1>
-    <p>Leertaste oder Tippen: Neustart</p>
+    <p>Tippen oder Leertaste: Neustart</p>
   </div>
 
-  <!-- Mobile Controls -->
-  <div class="mobile" id="mobile">
-    <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
-    <div class="fire" id="fire"></div>
-    <div class="shopBtn" id="shopBtn">SHOP</div>
-    <div class="hint">WASD/Joystick bewegen • Klick/Fire schießen • B/SHOP öffnet Laden</div>
-  </div>
-
-  <!-- SHOP -->
+  <!-- Shop -->
   <div class="overlay" id="overlay">
     <div class="shop">
       <div class="closeX" id="closeShop">✕</div>
-      <h2>🛒 Waffen-Shop <span class="badge">Coins: <span id="coinsShop">0</span></span></h2>
+      <h2>🛒 Shop <span class="badge">Coins: <span id="coinsShop">0</span></span></h2>
       <div class="grid" id="shopGrid"></div>
-      <p style="opacity:.8;font-size:12px;margin-top:10px">Coins durch Kills verdienen. Jede Waffe hat eine spezielle Fähigkeit.</p>
     </div>
+  </div>
+
+  <!-- Mobile controls -->
+  <div class="mobile" id="mobile">
+    <div class="stick" id="moveStick"><div class="knob"></div></div>
+    <div class="stick" id="shootStick"><div class="knob"></div></div>
+    <div class="shopBtn" id="shopBtn">SHOP</div>
   </div>
 </div>
 
 <script>
 (function(){
-  "use strict";
+"use strict";
 
-  // ===== Canvas =====
-  const canvas=document.getElementById('game');
-  const ctx=canvas.getContext('2d');
-  function resize(){ canvas.width=window.innerWidth|0; canvas.height=window.innerHeight|0; }
-  window.addEventListener('resize',resize); resize();
+/* ===== Helpers ===== */
+const byId=(id)=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rand=(a,b)=>Math.random()*(b-a)+a;
 
-  // ===== DOM Refs =====
-  const overlay=document.getElementById('overlay');
-  const shopGrid=document.getElementById('shopGrid');
-  const coinsShop=document.getElementById('coinsShop');
-  const startEl=document.getElementById('start');
-  const playBtn=document.getElementById('playBtn');
-  const openShopBtn=document.getElementById('openShopBtn');
-  const weaponSelect=document.getElementById('weaponSelect');
-  const rotateHint=document.getElementById('rotateHint');
-  const fsBtn=document.getElementById('fsBtn');
-  document.getElementById('closeShop').onclick=()=>toggleShop(false);
-  overlay.addEventListener('click',e=>{ if(e.target===overlay) toggleShop(false); });
+/* ===== Canvas ===== */
+const canvas=byId('game'), g=canvas.getContext('2d');
+function resize(){canvas.width=innerWidth;canvas.height=innerHeight;} addEventListener('resize',resize); resize();
 
-  // ===== Utils =====
-  const rand=(a,b)=>Math.random()*(b-a)+a;
-  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-  const lerp =(a,b,t)=>a+(b-a)*t;
-  const dist2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy};
-  const norm =(x,y)=>{const l=Math.hypot(x,y)||1;return {x:x/l,y:y/l};};
+/* ===== Config ===== */
+const K={worldW:2200,worldH:1400,playerSpeed:220,bulletSpeed:700,enemySpeed:95,spawnEvery:1.6,coinPerKill:1,playerMaxHP:3,enemyHP:1};
 
-  // ===== Config =====
-  const K={worldW:2400, worldH:1600, playerSpeed:210, bulletSpeed:680,
-    enemySpeedBase:70, enemySpeedRamp:9, enemySpawnBase:2.0, enemySpawnRamp:.08,
-    enemyDamage:14, maxHP:100, healDropChance:0.12, healAmount:28, coinPerKill:7};
+/* ===== Input (PC) ===== */
+const keys=new Set();
+addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyB')toggleShop(true);if(e.code==='Space'&&S.over)resetGame();});
+addEventListener('keyup',e=>keys.delete(e.code));
+const mouse={x:canvas.width/2,y:canvas.height/2,down:false};
+canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
+canvas.addEventListener('mousedown',()=>mouse.down=true);
+addEventListener('mouseup',()=>mouse.down=false);
 
-  // ===== Input =====
-  const keys=new Set();
-  window.addEventListener('keydown',e=>{
-    if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
-    keys.add(e.code);
-    if(e.code==='KeyB') toggleShop(overlay.style.display!=='flex');
-  });
-  window.addEventListener('keyup',e=>keys.delete(e.code));
-  const mouse={x:canvas.width/2,y:canvas.height/2,down:false};
-  canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect(); mouse.x=e.clientX-r.left; mouse.y=e.clientY-r.top;});
-  canvas.addEventListener('mousedown',()=>mouse.down=true);
-  window.addEventListener('mouseup',()=>mouse.down=false);
+/* ===== Mobile BS Controls (2 Sticks) ===== */
+const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
+byId('mobile').style.display=isTouch?'block':'none';
 
-  // Mobile
-  const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
-  document.getElementById('mobile').style.display=isTouch?'block':'none';
-  const stick=document.getElementById('stick'), knob=document.getElementById('knob');
-  const fireBtn=document.getElementById('fire'), shopBtn=document.getElementById('shopBtn');
-  let joyActive=false, joyVec={x:0,y:0}; const joyMax=50;
-  function joyStart(x,y){ joyActive=true; updateJoy(x,y); }
-  function updateJoy(x,y){ const r=stick.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
-    let dx=x-cx, dy=y-cy; const len=Math.hypot(dx,dy); const cl=Math.min(joyMax,len||1);
-    if(len>0){dx=dx/len*cl; dy=dy/len*cl;} knob.style.transform=`translate(${dx}px,${dy}px) translate(-50%,-50%)`; joyVec.x=dx/joyMax; joyVec.y=dy/joyMax; }
-  function joyEnd(){ joyActive=false; joyVec.x=0; joyVec.y=0; knob.style.transform='translate(-50%,-50%)'; }
-  stick?.addEventListener('touchstart',e=>{e.preventDefault(); const t=e.changedTouches[0]; joyStart(t.clientX,t.clientY)},{passive:false});
-  stick?.addEventListener('touchmove', e=>{e.preventDefault(); const t=e.changedTouches[0]; updateJoy(t.clientX,t.clientY)},{passive:false});
-  stick?.addEventListener('touchend',  e=>{e.preventDefault(); joyEnd()},{passive:false});
-  stick?.addEventListener('touchcancel',e=>{e.preventDefault(); joyEnd()},{passive:false});
-  let fireTouch=false;
-  fireBtn?.addEventListener('touchstart',e=>{e.preventDefault(); fireTouch=true},{passive:false});
-  fireBtn?.addEventListener('touchend',e=>{e.preventDefault(); fireTouch=false},{passive:false});
-  shopBtn?.addEventListener('touchstart',e=>{e.preventDefault(); toggleShop(true)},{passive:false});
-
-  // ===== Shop Data =====
-  const WEAPONS=[
-    {id:'pistol', name:'Pistol',    price:0,   desc:'Solide Allrounder.', stats:{dmg:28,rate:6},   fire(s,wx,wy){ shoot(s,wx,wy,28,0,0,false);} },
-    {id:'smg',    name:'SMG',       price:60,  desc:'Hohe Feuerrate.',    stats:{dmg:16,rate:12},  fire(s,wx,wy){ shoot(s,wx,wy,16,rand(-0.06,0.06),0,false);} },
-    {id:'shotgun',name:'Shotgun',   price:120, desc:'5 Kugeln Spread.',   stats:{dmg:12,rate:2},   fire(s,wx,wy){ for(let i=0;i<5;i++) shoot(s,wx,wy,12,rand(-0.22,0.22),0,false);} },
-    {id:'sniper', name:'Sniper',    price:140, desc:'Piercing Schuss.',   stats:{dmg:80,rate:1.8}, fire(s,wx,wy){ shoot(s,wx,wy,80,0,0,true);} },
-    {id:'freeze', name:'Freeze',    price:180, desc:'Verlangsamt Gegner.',stats:{dmg:18,rate:6},   fire(s,wx,wy){ shoot(s,wx,wy,18,0,0.55,false);} },
-    {id:'boomer', name:'Boomerang', price:220, desc:'Kommt zurück.',      stats:{dmg:14,rate:2.8}, fire(s,wx,wy){ const d=norm(wx-s.player.x,wy-s.player.y); s.booms.push({x:s.player.x,y:s.player.y,vx:d.x*360,vy:d.y*360,r:10,t:0,phase:'out',dmg:14}); } },
-    {id:'rocket', name:'Rocket',    price:260, desc:'AOE Explosion.',     stats:{dmg:50,rate:1.8}, fire(s,wx,wy){ const d=norm(wx-s.player.x,wy-s.player.y); s.rockets.push({x:s.player.x,y:s.player.y,vx:d.x*380,vy:d.y*380,r:6}); } },
-  ];
-  const getW=id=>WEAPONS.find(w=>w.id===id);
-
-  // ===== State =====
-  let state;
-  function centerCameraImmediate(){
-    const vw=canvas.width, vh=canvas.height;
-    state.camera.x = clamp(state.player.x - vw/2, 0, K.worldW - vw);
-    state.camera.y = clamp(state.player.y - vh/2, 0, K.worldH - vh);
+function makeStick(el){
+  const knob=el.querySelector('.knob');
+  const o={active:false, vec:{x:0,y:0}};
+  const max=50;
+  function start(x,y){ o.active=true; update(x,y); }
+  function update(x,y){
+    const r=el.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+    let dx=x-cx, dy=y-cy; const len=Math.hypot(dx,dy);
+    const cl=Math.min(max,len||1);
+    if(len>0){dx=dx/len*cl; dy=dy/len*cl;}
+    knob.style.transform=`translate(${dx}px,${dy}px) translate(-50%,-50%)`;
+    o.vec.x=dx/max; o.vec.y=dy/max;
   }
-  function resetGame(){
-    state={
-      t:0,
-      player:{x:K.worldW/2,y:K.worldH/2,r:16,hp:K.maxHP,facing:0,fireCD:0,weapon:'pistol'},
-      bullets:[], enemies:[], drops:[], booms:[], rockets:[], explosions:[],
-      score:0, wave:1, nextSpawn:0, gameOver:false, camera:{x:0,y:0}, coins:50, // 50 Test-Coins
-      owned:new Set(['pistol'])
-    };
-    // Startwaffe (wenn nicht owned → bleibt pistol)
-    const want = (weaponSelect?.value)||'pistol';
-    if(want && want!=='pistol' && WEAPONS.some(w=>w.id===want) && state.owned.has(want)) {
-      state.player.weapon = want;
+  function end(){
+    const last={x:o.vec.x,y:o.vec.y};
+    o.active=false; o.vec.x=0; o.vec.y=0;
+    knob.style.transform='translate(-50%,-50%)';
+    // Beim Shoot-Stick: Loslassen = Schuss (BS-Style)
+    if(el.id==='shootStick'){ handleShootRelease(last); }
+  }
+  el.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];start(t.clientX,t.clientY)},{passive:false});
+  el.addEventListener('touchmove', e=>{e.preventDefault();const t=e.changedTouches[0];update(t.clientX,t.clientY)},{passive:false});
+  el.addEventListener('touchend',  e=>{e.preventDefault();end();},{passive:false});
+  el.addEventListener('touchcancel',e=>{e.preventDefault();end();},{passive:false});
+  return o;
+}
+const moveStick=makeStick(byId('moveStick'));
+const shootStick=makeStick(byId('shootStick'));
+byId('shopBtn').addEventListener('touchstart',e=>{e.preventDefault();toggleShop(true)},{passive:false});
+
+/* ===== Shop ===== */
+const WEAPONS=[
+  {id:'pistol', name:'Pistol',  price:0,  rate:4, dmg:1, multi:1, spread:0},
+  {id:'smg',    name:'SMG',     price:6,  rate:9, dmg:1, multi:1, spread:0.05},
+  {id:'shotgun',name:'Shotgun', price:10, rate:2, dmg:1, multi:3, spread:0.18}
+];
+const getW=id=>WEAPONS.find(w=>w.id===id);
+const overlay=byId('overlay'), shopGrid=byId('shopGrid'), coinsShop=byId('coinsShop');
+byId('closeShop').onclick=()=>toggleShop(false);
+overlay.addEventListener('click',e=>{if(e.target===overlay)toggleShop(false);});
+
+function toggleShop(on){ overlay.style.display=on?'flex':'none'; if(on) renderShop(); }
+function renderShop(){
+  coinsShop.textContent=S.coins;
+  shopGrid.innerHTML='';
+  for(const w of WEAPONS){
+    const owned=S.owned.has(w.id),active=S.p.weapon===w.id;
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`<div><b>${w.name}</b> ${owned?(active?'<span class="badge">Aktiv</span>':'<span class="badge">Gekauft</span>'):''}</div>
+                    <div class="badge">Preis: ${w.price}c</div>`;
+    const btn=document.createElement('button'); btn.className='btn';
+    if(!owned){
+      btn.textContent='Kaufen'; btn.disabled=S.coins<w.price;
+      btn.onclick=()=>{ if(S.coins>=w.price){ S.coins-=w.price; S.owned.add(w.id); renderShop(); updateHUD(); } };
+    }else{
+      btn.textContent=active?'Aktiv':'Ausrüsten';
+      btn.onclick=()=>{ S.p.weapon=w.id; renderShop(); updateHUD(); };
     }
-    centerCameraImmediate();
-    for(let i=0;i<3;i++) spawnEnemy();
-    state.enemies.push({x:state.player.x+120,y:state.player.y+60,r:14,hp:32,spd:90,slowT:0});
-    renderShop(); updateHUD(); document.getElementById('center').style.display='none';
+    card.appendChild(btn); shopGrid.appendChild(card);
   }
-  resetGame();
+}
 
-  // ===== Start/Vorschau Verhalten =====
-  function closeStart(){
-    if(startEl) startEl.style.display='none';
-    // wenn Startwaffe im Dropdown gewählt und gekauft → setzen
-    const chosen = weaponSelect?.value || 'pistol';
-    if(state.owned.has(chosen)) state.player.weapon=chosen;
-    updateHUD();
+/* ===== State ===== */
+let S;
+function resetGame(){
+  S={
+    t:0, cam:{x:0,y:0},
+    p:{x:K.worldW/2,y:K.worldH/2,hp:K.playerMaxHP,cd:0,weapon:'pistol'},
+    bullets:[], enemies:[], score:0, wave:1, nextSpawn:0, coins:0,
+    owned:new Set(['pistol']), over:false, hitCD:0
+  };
+  spawnEnemy(); spawnEnemy(); updateHUD(); byId('center').style.display='none';
+}
+resetGame();
+
+/* ===== Shooting ===== */
+function handleShootRelease(vec){
+  // Quick fire (Tap) = fast keine Richtung -> such nächsten Gegner
+  const mag=Math.hypot(vec.x,vec.y);
+  if(mag<0.3){
+    let target=null,best=Infinity;
+    for(const e of S.enemies){const d=(e.x-S.p.x)**2+(e.y-S.p.y)**2; if(d<best){best=d; target=e;}}
+    if(target){ shootAt(target.x,target.y); }
+  }else{
+    // Normales Schießen in Stick-Richtung
+    const ang=Math.atan2(vec.y,vec.x);
+    shootDir(ang);
   }
-  playBtn.onclick=()=>{ closeStart(); };
-  openShopBtn.onclick=()=>{ closeStart(); toggleShop(true); };
+}
+function shootAt(wx,wy){
+  const w=getW(S.p.weapon);
+  if(S.p.cd>0) return;
+  const ang=Math.atan2(wy-S.p.y,wx-S.p.x);
+  for(let i=0;i<w.multi;i++){
+    const a=ang+(w.multi>1?(i-(w.multi-1)/2)*w.spread:(Math.random()*2-1)*w.spread);
+    S.bullets.push({x:S.p.x,y:S.p.y,vx:Math.cos(a)*K.bulletSpeed,vy:Math.sin(a)*K.bulletSpeed,life:0.9,dmg:w.dmg});
+  }
+  S.p.cd=1/w.rate;
+}
+function shootDir(ang){
+  const w=getW(S.p.weapon);
+  if(S.p.cd>0) return;
+  for(let i=0;i<w.multi;i++){
+    const a=ang+(w.multi>1?(i-(w.multi-1)/2)*w.spread:(Math.random()*2-1)*w.spread);
+    S.bullets.push({x:S.p.x,y:S.p.y,vx:Math.cos(a)*K.bulletSpeed,vy:Math.sin(a)*K.bulletSpeed,life:0.9,dmg:w.dmg});
+  }
+  S.p.cd=1/w.rate;
+}
 
-  // ===== Shop UI =====
-  function toggleShop(on){
-    overlay.style.display=on?'flex':'none';
-    coinsShop.textContent = state.coins|0;
-    if(on) renderShop();
-  }
-  function renderShop(){
-    coinsShop.textContent=state.coins|0;
-    shopGrid.innerHTML='';
-    for(const w of WEAPONS){
-      const owned=state.owned.has(w.id), equipped=state.player.weapon===w.id;
-      const el=document.createElement('div'); el.className='card';
-      const title=document.createElement('div'); title.innerHTML=`<b>${w.name}</b> ${owned?(equipped?'<span class="badge">AUSGERÜSTET</span>':'<span class="badge">GEKAUFT</span>'):''}`;
-      const desc=document.createElement('div'); desc.className='desc'; desc.textContent=w.desc;
-      const price=document.createElement('div'); price.className='badge'; price.textContent=`Preis: ${w.price}c`;
-      const row=document.createElement('div'); row.className='row2';
-      const btn=document.createElement('button'); btn.className='btn';
-      if(!owned){
-        btn.textContent='Kaufen'; btn.disabled=state.coins<w.price;
-        btn.onclick=()=>{ if(state.coins>=w.price){ state.coins-=w.price; state.owned.add(w.id); updateHUD(); renderShop();
-          // Dropdown sofort freischalten
-          [...weaponSelect.options].forEach(o=>o.disabled=!state.owned.has(o.value) && o.value!=='pistol');
-        } };
-      }else{
-        btn.textContent=equipped?'Aktiv':'Ausrüsten';
-        btn.onclick=()=>{ state.player.weapon=w.id; updateHUD(); renderShop(); };
-      }
-      row.append(price,btn); el.append(title,desc,row); shopGrid.appendChild(el);
-    }
-  }
-  // Dropdown-Optionen sperren, wenn nicht owned
-  function refreshSelectLock(){
-    [...weaponSelect.options].forEach(o=>{
-      o.disabled = (o.value!=='pistol' && !state.owned.has(o.value));
-    });
-  }
-  refreshSelectLock();
+/* ===== Enemies ===== */
+function spawnEnemy(){
+  const m=40, side=(Math.random()*4)|0;
+  let x,y;
+  if(side==0){x=rand(0,K.worldW);y=-m}
+  else if(side==1){x=K.worldW+m;y=rand(0,K.worldH)}
+  else if(side==2){x=rand(0,K.worldW);y=K.worldH+m}
+  else{x=-m;y=rand(0,K.worldH)}
+  S.enemies.push({x,y,hp:K.enemyHP});
+}
 
-  // ===== Mechanics =====
-  function shoot(s,wx,wy,dmg,spread=0,slow=0,pierce=false){
-    const dx=wx-s.player.x, dy=wy-s.player.y, a=Math.atan2(dy,dx)+spread;
-    const vx=Math.cos(a)*K.bulletSpeed, vy=Math.sin(a)*K.bulletSpeed;
-    s.bullets.push({x:s.player.x,y:s.player.y,vx,vy,life:1.2,r:4,dmg,slow,pierce});
-    s.player.facing=a;
+/* ===== Update ===== */
+function update(dt){
+  if(S.over) return;
+  S.t+=dt;
+  if(S.hitCD>0) S.hitCD-=dt;
+
+  // Movement
+  let vx=0,vy=0;
+  if(keys.has('KeyW'))vy-=1; if(keys.has('KeyS'))vy+=1;
+  if(keys.has('KeyA'))vx-=1; if(keys.has('KeyD'))vx+=1;
+  if(moveStick.active){ vx+=moveStick.vec.x; vy+=moveStick.vec.y; }
+  const len=Math.hypot(vx,vy)||1; vx/=len; vy/=len;
+  S.p.x=clamp(S.p.x+vx*K.playerSpeed*dt,0,K.worldW);
+  S.p.y=clamp(S.p.y+vy*K.playerSpeed*dt,0,K.worldH);
+
+  // PC Schießen (Maus)
+  if(mouse.down && S.p.cd<=0){
+    shootAt(S.cam.x+mouse.x, S.cam.y+mouse.y);
   }
-  function spawnEnemy(){
-    const m=40, side=(Math.random()*4)|0;
-    let x,y; if(side===0){x=rand(0,K.worldW);y=-m}
-    else if(side===1){x=K.worldW+m;y=rand(0,K.worldH)}
-    else if(side===2){x=rand(0,K.worldW);y=K.worldH+m}
-    else{x=-m;y=rand(0,K.worldH)}
-    const spd=K.enemySpeedBase+state.wave*K.enemySpeedRamp+rand(-6,12);
-    state.enemies.push({x,y,r:14,hp:30+state.wave*2,spd,slowT:0});
-  }
-  function tryShoot(dt){
-    const wp=getW(state.player.weapon); state.player.fireCD-=dt;
-    const want=mouse.down||fireTouch;
-    if(want && state.player.fireCD<=0){
-      state.player.fireCD=1/wp.stats.rate;
-      const wx=state.camera.x+mouse.x, wy=state.camera.y+mouse.y; wp.fire(state,wx,wy);
-    }
+  if(S.p.cd>0) S.p.cd-=dt;
+
+  // Bullets
+  for(const b of S.bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
+  S.bullets=S.bullets.filter(b=>b.life>0 && b.x>-80 && b.y>-80 && b.x<K.worldW+80 && b.y<K.worldH+80);
+
+  // Enemies move to player
+  for(const e of S.enemies){
+    const dx=S.p.x-e.x, dy=S.p.y-e.y, d=Math.hypot(dx,dy)||1;
+    e.x+=dx/d*K.enemySpeed*dt; e.y+=dy/d*K.enemySpeed*dt;
   }
 
-  function update(dt){
-    state.t+=dt; if(state.gameOver) return;
-    let vx=0,vy=0;
-    if(keys.has('KeyW')||keys.has('ArrowUp')) vy-=1;
-    if(keys.has('KeyS')||keys.has('ArrowDown')) vy+=1;
-    if(keys.has('KeyA')||keys.has('ArrowLeft')) vx-=1;
-    if(keys.has('KeyD')||keys.has('ArrowRight')) vx+=1;
-    if(joyActive){ vx+=joyVec.x; vy+=joyVec.y; }
-    const l=Math.hypot(vx,vy); if(l>0){ vx/=l; vy/=l; }
-    state.player.x=clamp(state.player.x+vx*K.playerSpeed*dt,0,K.worldW);
-    state.player.y=clamp(state.player.y+vy*K.playerSpeed*dt,0,K.worldH);
-
-    const wx=state.camera.x+mouse.x, wy=state.camera.y+mouse.y;
-    state.player.facing=Math.atan2(wy-state.player.y, wx-state.player.x);
-    tryShoot(dt);
-
-    for(let i=state.bullets.length-1;i>=0;i--){
-      const b=state.bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt;
-      if(b.life<=0||b.x<-60||b.y<-60||b.x>K.worldW+60||b.y>K.worldH+60) state.bullets.splice(i,1);
-    }
-
-    for(let i=state.booms.length-1;i>=0;i--){
-      const bo=state.booms[i]; bo.t+=dt;
-      if(bo.phase==='out'&&bo.t>0.35) bo.phase='back';
-      if(bo.phase==='back'){
-        const d=norm(state.player.x-bo.x, state.player.y-bo.y); bo.vx=d.x*360; bo.vy=d.y*360;
-        if(dist2(bo.x,bo.y,state.player.x,state.player.y) < (bo.r+state.player.r)*(bo.r+state.player.r)){ state.booms.splice(i,1); continue; }
-      }
-      bo.x+=bo.vx*dt; bo.y+=bo.vy*dt;
-      if(bo.x<-100||bo.y<-100||bo.x>K.worldW+100||bo.y>K.worldH+100) state.booms.splice(i,1);
-    }
-
-    for(let i=state.rockets.length-1;i>=0;i--){
-      const r=state.rockets[i]; r.x+=r.vx*dt; r.y+=r.vy*dt;
-      let hit=false; for(const e of state.enemies){ if(dist2(r.x,r.y,e.x,e.y) < (r.r+e.r)*(r.r+e.r)){ hit=true; break; } }
-      if(hit||r.x<-20||r.y<-20||r.x>K.worldW+20||r.y>K.worldH+20){
-        state.explosions.push({x:r.x,y:r.y,r:0,R:80,t:0});
-        for(const e of state.enemies){ const D=Math.hypot(e.x-r.x,e.y-r.y); if(D<=80){ e.hp-=50*(1-D/80); } }
-        state.rockets.splice(i,1);
+  // Collisions bullet -> enemy
+  for(let i=S.enemies.length-1;i>=0;i--){
+    const e=S.enemies[i];
+    let dead=false;
+    for(let j=S.bullets.length-1;j>=0;j--){
+      const b=S.bullets[j];
+      if((b.x-e.x)**2+(b.y-e.y)**2 < 18*18){
+        e.hp-=b.dmg; S.bullets.splice(j,1);
+        if(e.hp<=0){ dead=true; break; }
       }
     }
-    for(let i=state.explosions.length-1;i>=0;i--){
-      const ex=state.explosions[i]; ex.t+=dt; ex.r=ex.R*ex.t*2; if(ex.t>0.35) state.explosions.splice(i,1);
+    if(dead){
+      S.enemies.splice(i,1);
+      S.score+=10; S.coins+=K.coinPerKill;
     }
-
-    state.nextSpawn-=dt;
-    if(state.nextSpawn<=0){
-      const rate=Math.max(.45, K.enemySpawnBase - state.wave*K.enemySpawnRamp);
-      state.nextSpawn=rate; spawnEnemy(); if(Math.random()<0.2) spawnEnemy();
-    }
-
-    const px=state.player.x, py=state.player.y;
-    for(const e of state.enemies){
-      const dx=px-e.x, dy=py-e.y, l2=Math.hypot(dx,dy)||1;
-      const slowMul=e.slowT>0?0.45:1;
-      e.x+=dx/l2*e.spd*dt*slowMul; e.y+=dy/l2*e.spd*dt*slowMul;
-      if(e.slowT>0) e.slowT-=dt;
-    }
-
-    for(let i=state.enemies.length-1;i>=0;i--){
-      const e=state.enemies[i]; let killed=false;
-      for(let j=state.bullets.length-1;j>=0;j--){
-        const b=state.bullets[j];
-        if(dist2(e.x,e.y,b.x,b.y) < (e.r+b.r)*(e.r+b.r)){
-          e.hp-=b.dmg; if(b.slow>0) e.slowT=Math.max(e.slowT,0.8);
-          if(!b.pierce) state.bullets.splice(j,1);
-          if(e.hp<=0){ killed=true; break; }
-        }
-      }
-      for(const bo of state.booms){
-        if(dist2(e.x,e.y,bo.x,bo.y) < (e.r+bo.r)*(e.r+bo.r)){ e.hp-=bo.dmg*dt*4; if(e.hp<=0) killed=true; }
-      }
-      if(killed){
-        state.enemies.splice(i,1);
-        state.score+=10; state.coins+=K.coinPerKill;
-        if(state.score%100===0) state.wave++;
-        if(Math.random()<K.healDropChance) state.drops.push({x:e.x,y:e.y,r:10,t:8,kind:'heal'});
-      }
-    }
-
-    for(const e of state.enemies){
-      if(dist2(e.x,e.y,px,py) < (e.r+state.player.r)*(e.r+state.player.r)){
-        if(!e.hitCD||e.hitCD<=0){ e.hitCD=0.6; state.player.hp=Math.max(0,state.player.hp-K.enemyDamage); }
-      }
-      if(e.hitCD) e.hitCD-=dt;
-    }
-
-    for(let i=state.drops.length-1;i>=0;i--){
-      const d=state.drops[i]; d.t-=dt; if(d.t<=0){ state.drops.splice(i,1); continue; }
-      if(dist2(d.x,d.y,px,py) < (d.r+state.player.r)*(d.r+state.player.r)){
-        state.player.hp=Math.min(K.maxHP, state.player.hp+K.healAmount);
-        state.drops.splice(i,1);
-      }
-    }
-
-    // Kamera smooth
-    const vw=canvas.width, vh=canvas.height;
-    const tx=clamp(state.player.x - vw/2, 0, K.worldW - vw);
-    const ty=clamp(state.player.y - vh/2, 0, K.worldH - vh);
-    state.camera.x=lerp(state.camera.x,tx,0.18);
-    state.camera.y=lerp(state.camera.y,ty,0.18);
-
-    updateHUD();
-    if(state.player.hp<=0){ state.gameOver=true; document.getElementById('center').style.display='block'; }
   }
 
-  function updateHUD(){
-    byId('score').textContent=state.score|0;
-    byId('wave').textContent=state.wave|0;
-    byId('hpFill').style.width=(state.player.hp/K.maxHP*100).toFixed(1)+'%';
-    byId('coins').textContent=state.coins|0;
-    byId('weaponName').textContent=getW(state.player.weapon).name;
-    byId('ammo').textContent='∞';
-    coinsShop.textContent=state.coins|0;
-  }
-  const byId=id=>document.getElementById(id);
-
-  // ===== Draw =====
-  function draw(){
-    const w=canvas.width, h=canvas.height, g=ctx;
-    g.clearRect(0,0,w,h);
-    const cam=state.camera;
-    g.save(); g.translate(-cam.x,-cam.y);
-
-    // Grid
-    g.globalAlpha=.25; g.strokeStyle='#1f2331'; g.lineWidth=1; g.beginPath();
-    for(let x=0;x<=K.worldW;x+=64){ g.moveTo(x,0); g.lineTo(x,K.worldH); }
-    for(let y=0;y<=K.worldH;y+=64){ g.moveTo(0,y); g.lineTo(K.worldW,y); }
-    g.stroke(); g.globalAlpha=1;
-
-    // Drops
-    for(const d of state.drops){
-      g.save(); g.translate(d.x,d.y);
-      const pulse=1+Math.sin(state.t*4)*.08; g.scale(pulse,pulse);
-      g.beginPath(); g.fillStyle='#2dd4bf'; roundRect(g,-12,-12,24,24,6); g.fill();
-      g.fillStyle='#083f3e'; g.fillRect(-3,-10,6,20); g.fillRect(-10,-3,20,6); g.restore();
+  // Enemy -> player (mit kurzer Unverwundbarkeit)
+  for(const e of S.enemies){
+    if((e.x-S.p.x)**2+(e.y-S.p.y)**2 < (16+14)*(16+14) && S.hitCD<=0){
+      S.p.hp=Math.max(0,S.p.hp-1);
+      S.hitCD=0.6; // 600ms i-frame
+      // kleiner Rückstoß
+      const dx=e.x-S.p.x, dy=e.y-S.p.y, d=Math.hypot(dx,dy)||1;
+      e.x+=dx/d*30; e.y+=dy/d*30;
     }
-
-    // Enemies
-    for(const e of state.enemies){
-      g.save(); g.translate(e.x,e.y);
-      g.fillStyle=e.slowT>0?'#60a5fa':'#ef4444'; blob(g,e.r);
-      g.fillStyle='#111827'; g.beginPath(); g.arc(-4,-2,2,0,Math.PI*2); g.fill();
-      g.beginPath(); g.arc(5,-2,2,0,Math.PI*2); g.fill(); g.restore();
-    }
-
-    // Player
-    g.save(); g.translate(state.player.x,state.player.y);
-    g.fillStyle='#60a5fa'; blob(g,state.player.r);
-    g.fillStyle='#0b1220'; g.beginPath(); g.arc(-3,-3,2,0,Math.PI*2); g.fill();
-    g.beginPath(); g.arc(4,-3,2,0,Math.PI*2); g.fill(); g.restore();
-
-    // Bullets
-    for(const b of state.bullets){
-      g.save(); g.translate(b.x,b.y); const a=Math.atan2(b.vy,b.vx); g.rotate(a);
-      g.fillStyle=b.pierce?'#fbbf24':(b.slow>0?'#93c5fd':'#fde047');
-      roundRect(g,-6,-3,12,6,3); g.fill(); g.restore();
-    }
-
-    // Boomerang
-    for(const bo of state.booms){
-      g.save(); g.translate(bo.x,bo.y); g.rotate(state.t*10);
-      g.fillStyle='#fb7185'; roundRect(g,-bo.r,-4,bo.r*2,8,4); g.fill(); g.restore();
-    }
-
-    // Rockets & Explosions
-    for(const r of state.rockets){
-      g.save(); g.translate(r.x,r.y); g.rotate(Math.atan2(r.vy,r.vx));
-      g.fillStyle='#9ca3af'; roundRect(g,-8,-5,16,10,4); g.fill();
-      g.fillStyle='#ef4444'; roundRect(g,6,-3,6,6,3); g.fill(); g.restore();
-    }
-    for(const ex of state.explosions){
-      g.save(); g.translate(ex.x,ex.y); g.globalAlpha=.5; g.fillStyle='#f59e0b';
-      g.beginPath(); g.arc(0,0,ex.r,0,Math.PI*2); g.fill(); g.globalAlpha=1; g.restore();
-    }
-
-    g.restore();
-
-    // Cursor
-    g.save(); g.beginPath(); g.globalAlpha=.9; g.strokeStyle='#fff'; g.lineWidth=2;
-    g.arc(mouse.x,mouse.y,8,0,Math.PI*2); g.stroke(); g.globalAlpha=1; g.restore();
-
-    // Gun HUD
-    drawGunHUD(g,w,h);
   }
 
-  function drawGunHUD(g,w,h){
-    g.save();
-    const baseX=w-180, baseY=h-120, sway=Math.sin(state.t*6)*2;
-    g.translate(baseX,baseY+sway); g.rotate(0.02);
-    g.fillStyle='#facc15'; roundRect(g,28,46,90,46,22); g.fill(); roundRect(g,20,30,24,26,10); g.fill();
-    g.fillStyle='#94a3b8'; roundRect(g,0,0,120,28,6); g.fill();
-    g.fillStyle='#64748b'; roundRect(g,112,6,16,16,4); g.fill();
-    g.fillStyle='#1f2937'; roundRect(g,8,-8,20,8,3); g.fill();
-    g.fillStyle='#1f2937'; g.save(); g.translate(46,20); g.rotate(0.55); roundRect(g,0,0,24,54,8); g.fill(); g.restore();
-    g.strokeStyle='#0b1220'; g.lineWidth=3; g.beginPath(); g.moveTo(40,24); g.quadraticCurveTo(52,40,68,30); g.stroke();
-    const colorByWeapon={pistol:'#fb7185',smg:'#4ade80',shotgun:'#f59e0b',sniper:'#fbbf24',freeze:'#60a5fa',boomer:'#c084fc',rocket:'#ef4444'}[state.player.weapon]||'#fb7185';
-    g.fillStyle=colorByWeapon; roundRect(g,68,6,18,12,3); g.fill();
-    g.restore();
+  // Spawning
+  S.nextSpawn-=dt;
+  if(S.nextSpawn<=0){
+    spawnEnemy();
+    if(Math.random()<0.2) spawnEnemy();
+    S.nextSpawn=K.spawnEvery;
   }
-  function blob(g,r){ g.beginPath(); const k=0.55*r; g.moveTo(-r,0); g.bezierCurveTo(-r,-k,-k,-r,0,-r); g.bezierCurveTo(k,-r,r,-k,r,0); g.bezierCurveTo(r,k,k,r,0,r); g.bezierCurveTo(k,r,-r,k,-r,0); g.fill(); }
-  function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
 
-  // ===== Loop & Restart =====
-  let last=performance.now();
-  function tick(now){ const dt=Math.min(.033,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(tick); }
-  requestAnimationFrame(tick);
-  window.addEventListener('keydown',e=>{ if(state.gameOver && e.code==='Space'){ resetGame(); } });
-  window.addEventListener('pointerdown',()=>{ if(state.gameOver){ resetGame(); } });
-  canvas.addEventListener('touchstart',e=>{ const t=e.changedTouches[0], r=canvas.getBoundingClientRect(); mouse.x=t.clientX-r.left; mouse.y=t.clientY-r.top; },{passive:true});
+  // Camera follow
+  const tx=clamp(S.p.x-canvas.width/2,0,K.worldW-canvas.width);
+  const ty=clamp(S.p.y-canvas.height/2,0,K.worldH-canvas.height);
+  S.cam.x += (tx-S.cam.x)*0.18;
+  S.cam.y += (ty-S.cam.y)*0.18;
 
-  // ===== iOS Orientation Helper =====
-  (function(){
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    function wantLandscapeRight(){
-      const angle = (typeof window.orientation === 'number') ? window.orientation : 0;
-      const isLandscape = window.innerWidth > window.innerHeight;
-      return isLandscape && angle === 90;
-    }
-    function applyRotateHint(){
-      if(!isIOS){ rotateHint.style.display='none'; return; }
-      rotateHint.style.display = wantLandscapeRight() ? 'none' : 'flex';
-    }
-    async function tryFullscreenLock(){
-      try{
-        const el=document.documentElement;
-        if(el.requestFullscreen) await el.requestFullscreen();
-        if(screen.orientation && screen.orientation.lock){
-          try{ await screen.orientation.lock('landscape-primary'); }catch(e){}
-          try{ await screen.orientation.lock('landscape'); }catch(e){}
-        }
-      }finally{ setTimeout(applyRotateHint,200); }
-    }
-    fsBtn?.addEventListener('click', tryFullscreenLock);
-    window.addEventListener('orientationchange', ()=>setTimeout(applyRotateHint,100));
-    window.addEventListener('resize', ()=>setTimeout(applyRotateHint,100));
-    applyRotateHint();
-  })();
+  updateHUD();
+  if(S.p.hp<=0){ S.over=true; byId('center').style.display='block'; }
+}
+
+/* ===== Draw ===== */
+function draw(){
+  const w=canvas.width,h=canvas.height,cam=S.cam;
+  g.clearRect(0,0,w,h);
+
+  g.save(); g.translate(-cam.x,-cam.y);
+
+  // Grid
+  g.globalAlpha=.25; g.strokeStyle='#1b2130'; g.lineWidth=1; g.beginPath();
+  for(let x=0;x<=K.worldW;x+=64){ g.moveTo(x,0); g.lineTo(x,K.worldH); }
+  for(let y=0;y<=K.worldH;y+=64){ g.moveTo(0,y); g.lineTo(K.worldW,y); }
+  g.stroke(); g.globalAlpha=1;
+
+  // Enemies
+  g.fillStyle='#ef4444';
+  for(const e of S.enemies){ g.beginPath(); g.arc(e.x,e.y,14,0,Math.PI*2); g.fill(); }
+
+  // Player
+  g.fillStyle='#60a5fa'; g.beginPath(); g.arc(S.p.x,S.p.y,16,0,Math.PI*2); g.fill();
+
+  // Bullets
+  g.fillStyle='#fde047';
+  for(const b of S.bullets){ g.beginPath(); g.arc(b.x,b.y,4,0,Math.PI*2); g.fill(); }
+
+  // Schuss-Vorschau-Linie beim rechten Stick (nur mobile)
+  if(isTouch && shootStick.active){
+    const ang=Math.atan2(shootStick.vec.y, shootStick.vec.x);
+    const len=110;
+    g.strokeStyle='#ffffff'; g.globalAlpha=.8; g.lineWidth=2;
+    g.beginPath();
+    g.moveTo(S.p.x, S.p.y);
+    g.lineTo(S.p.x + Math.cos(ang)*len, S.p.y + Math.sin(ang)*len);
+    g.stroke();
+    g.globalAlpha=1;
+  }
+
+  g.restore();
+
+  // Cursor ring (PC)
+  g.save(); g.strokeStyle='#fff'; g.globalAlpha=.9; g.lineWidth=2; g.beginPath();
+  g.arc(mouse.x,mouse.y,9,0,Math.PI*2); g.stroke(); g.restore();
+}
+
+/* ===== HUD ===== */
+function updateHUD(){
+  byId('score').textContent=S.score|0;
+  byId('wave').textContent=S.wave|0;
+  byId('coins').textContent=S.coins|0;
+  byId('weaponName').textContent=getW(S.p.weapon).name;
+  coinsShop.textContent=S.coins|0;
+  const hearts=byId('hearts'); hearts.innerHTML='';
+  for(let i=0;i<K.playerMaxHP;i++){
+    const h=document.createElement('div'); h.className='heart'+(i<S.p.hp?'':' off'); hearts.appendChild(h);
+  }
+}
+
+/* ===== Loop ===== */
+let last=performance.now();
+function tick(now){ const dt=Math.min(.033,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(tick); }
+requestAnimationFrame(tick);
 
 })();
 </script>
