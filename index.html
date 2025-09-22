@@ -1,435 +1,822 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="de">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
-<title>Mini Shooter – BS Controls + Speicher (Fix)</title>
+<meta charset="utf-8" />
+<title>Mini Shooter — Lobby + Offline/Online (FFA) • Neo‑Cartoon Glass</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <style>
-  html,body{margin:0;height:100%;background:#0e0f12;font-family:system-ui,Segoe UI,Roboto,Arial;overflow:hidden}
-  #wrap{position:relative;width:100vw;height:100vh}
-  canvas{position:absolute;inset:0;display:block;width:100vw;height:100vh;background:linear-gradient(#141925,#0d111a)}
+  /*
+    Design-Ziele:
+    - Neo‑Cartoon: klare Outlines, simple Formen, dezente Neon-Akzente
+    - iOS‑Glas: translucente Karten, Blur, weiche Schatten
+    - Nicht zu grell: gedämpfte Pastell‑Palette mit punktuellen Glows
+  */
+  :root{
+    --txt:#0e1116; 
+    --bg1:#eaf2ff; --bg2:#f7fbff; /* Hintergrundverlauf */
+    --glass:rgba(255,255,255,.6); /* Grundglas */
+    --glass-strong:rgba(255,255,255,.75);
+    --stroke:#0e1116; /* Cartoon-Outline */
+    --bshadow:0 8px 24px rgba(14,17,22,.18), inset 0 1px 0 rgba(255,255,255,.45);
+    --cardBorder:1.5px solid rgba(14,17,22,.12);
 
-  /* HUD */
-  .hud{position:absolute;left:12px;top:12px;color:#fff;z-index:5;user-select:none}
-  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-  .pill{padding:4px 8px;border-radius:999px;background:#232633;border:1px solid #2d3246;font-size:12px}
-  .hearts{display:flex;gap:6px}
-  .heart{width:18px;height:18px;background:#ef4444;clip-path:path("M8.8 3.2c.7-1.2 2.7-1.2 3.4 0 .6 1 .4 2.5-.6 3.3L10.5 7 9 6.5c-1-.8-1.2-2.3-.6-3.3z M3 7c0-2.2 1.6-4 3.6-4 1 0 1.9.5 2.5 1.2C9.6 3.5 10.5 3 11.5 3 13.5 3 15 4.8 15 7c0 3.6-6 8-6 8S3 10.6 3 7");opacity:.9}
-  .heart.off{background:#475569;opacity:.6}
+    /* Akzentfarben (leicht neon, nicht grell) */
+    --blue:#7cb8ff; --cyan:#6ae1df; --mint:#82f3c6; --amber:#ffd98a; --rose:#ff8aa0; --violet:#bfa8ff;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;color:var(--txt);font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Arial}
+  body{background:linear-gradient(180deg,var(--bg1),var(--bg2)); overflow:hidden}
 
-  /* Game over */
-  .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#fff;text-align:center;z-index:6;display:none}
-  .center h1{margin:0 0 8px;font-size:40px}
+  /* sanftes Halftone/Noise fürs Papierfeeling */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;background:
+    radial-gradient(1200px 800px at 70% 20%,rgba(255,255,255,.6),rgba(255,255,255,0) 65%),
+    radial-gradient(1200px 800px at 25% 80%,rgba(255,255,255,.55),rgba(255,255,255,0) 65%);
+    mix-blend-mode:screen; z-index:0}
 
-  /* Shop Overlay */
-  .overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:10}
-  .shop{width:min(860px,94vw);max-height:86vh;overflow:auto;background:#10151f;border:1px solid #283041;border-radius:16px;color:#fff;padding:14px;position:relative}
-  .shop h2{margin:6px 0 10px}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
-  .grid.settings{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
-  .card{background:#151b27;border:1px solid #27334a;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
-  .badge{font-size:11px;background:#263049;padding:2px 6px;border-radius:999px}
-  .btn{padding:8px 12px;border-radius:10px;border:1px solid #3b82f6;background:#1e293b;color:#fff;font-weight:700;cursor:pointer}
-  .btn[disabled]{opacity:.55;cursor:not-allowed}
-  .closeX{position:absolute;right:12px;top:8px;font-size:22px;cursor:pointer;opacity:.9}
-  .small{font-size:12px;opacity:.9}
+  #game{position:fixed;inset:0;width:100vw;height:100vh;display:block;touch-action:none;user-select:none}
 
-  /* Mobile controls – zwei Sticks */
-  .mobile{position:absolute;inset:0;pointer-events:none;z-index:9}
-  .stick{position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);pointer-events:auto;touch-action:none}
-  .knob{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.2)}
-  #moveStick{left:16px;bottom:16px}
-  #shootStick{right:16px;bottom:16px}
-  .shopBtn{position:absolute;right:24px;bottom:180px;width:110px;height:46px;border-radius:12px;background:rgba(120,180,255,.15);border:1px solid rgba(120,180,255,.4);pointer-events:auto;color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center}
+  /* ===== HUD (Glas + Cartoon) ===== */
+  #hud{position:fixed;top:12px;left:12px;z-index:10;display:flex;gap:10px;align-items:center;
+       background:var(--glass);backdrop-filter:blur(14px) saturate(1.05);
+       border:var(--cardBorder); border-radius:16px; padding:10px 12px; box-shadow:var(--bshadow)}
+  .title{font-weight:900;letter-spacing:.3px;font-size:14px}
+  .hp{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:var(--glass-strong);
+      backdrop-filter:blur(12px); border:var(--cardBorder)}
+  .hpbar{width:150px;height:12px;border-radius:999px;background:rgba(14,17,22,.06);overflow:hidden;border:var(--cardBorder)}
+  .hpfill{width:100%;height:100%;background:linear-gradient(90deg,var(--mint),var(--blue));transition:width .18s;
+          box-shadow:0 0 14px rgba(130,243,198,.45)}
+  .badge,.coins,.mode{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:12px;background:var(--glass-strong);
+      border:var(--cardBorder);backdrop-filter:blur(12px);font-weight:900}
+  .coins{background:rgba(255,217,138,.25)}
+
+  /* Leave button */
+  #btnLeave{position:fixed;top:12px;right:12px;z-index:11;appearance:none;border:var(--cardBorder);
+    background:var(--glass-strong);backdrop-filter:blur(12px);color:var(--txt);border-radius:12px;padding:10px 14px;font-weight:900;
+    cursor:pointer;box-shadow:var(--bshadow)}
+  #btnLeave:hover{filter:brightness(1.03)}
+
+  /* Hinweisleiste */
+  #hint{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);z-index:9;background:var(--glass-strong);
+        backdrop-filter:blur(12px);border:var(--cardBorder); box-shadow:var(--bshadow);
+        padding:8px 12px;border-radius:12px;font-size:13px;text-align:center}
+
+  /* Start-Overlay (nur für PointerLock) */
+  #overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(14,17,22,.25);z-index:20;cursor:pointer}
+  #overlay .box{padding:28px 40px;border-radius:20px;text-align:center;background:var(--glass-strong);
+    border:var(--cardBorder);box-shadow:var(--bshadow)}
+  #overlay h1{margin:0;font-size:30px}
+  #overlay p{margin-top:8px;font-size:14px;opacity:.85}
+
+  /* Touch-Zonen */
+  .touch-zone{position:fixed;bottom:0;height:45%;width:50%;z-index:5}
+  #leftZone{left:0;} #rightZone{right:0;}
+  #joy{position:fixed;left:0;top:0;pointer-events:none;z-index:6}
+
+  /* Footer */
+  #footer{position:fixed;right:12px;bottom:12px;z-index:9;background:var(--glass-strong);border:var(--cardBorder);
+    padding:6px 10px;border-radius:12px;box-shadow:var(--bshadow);font-size:12px}
+
+  /* ======= LOBBY ======= */
+  #menu{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:30}
+  .menu-card{width:min(92vw,880px);padding:22px;border-radius:18px;background:var(--glass-strong);backdrop-filter:blur(18px);
+    border:var(--cardBorder); box-shadow:var(--bshadow)}
+  .menu-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .menu-title{font-size:26px;font-weight:1000;letter-spacing:.4px}
+  .menu-tabs{display:flex;gap:8px}
+  .btn{appearance:none;border:var(--cardBorder);background:var(--glass-strong);backdrop-filter:blur(12px);
+       color:var(--txt);border-radius:12px;padding:10px 14px;font-weight:900;cursor:pointer;box-shadow:var(--bshadow)}
+  .btn:hover{filter:brightness(1.04)}
+  .btn.primary{background:linear-gradient(180deg,rgba(124,184,255,.35),rgba(106,225,223,.25));}
+  .menu-body{display:grid;grid-template-columns:1fr;gap:14px;margin-top:16px}
+  .menu-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+  .pill{padding:8px 12px;border-radius:999px;border:var(--cardBorder);background:var(--glass);font-weight:800}
+  .skin-list{display:flex;gap:12px;flex-wrap:wrap}
+  .skin{width:64px;height:64px;border-radius:16px;border:var(--cardBorder);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;background:var(--glass);backdrop-filter:blur(10px)}
+  .skin.active{outline:3px solid rgba(124,184,255,.75); box-shadow:0 0 24px rgba(124,184,255,.45)}
+  .skin .dot{width:30px;height:30px;border-radius:999px;border:1.5px solid rgba(14,17,22,.2)}
+  .skin.aqua .dot{background:linear-gradient(135deg,var(--cyan),var(--blue))}
+  .skin.red .dot{background:linear-gradient(135deg,var(--rose),#ffb0bf)}
+  .skin.purple .dot{background:linear-gradient(135deg,var(--violet),var(--blue))}
+  .skin.gold .dot{background:linear-gradient(135deg,var(--amber),#ffaf6b)}
+  .skin.mint .dot{background:linear-gradient(135deg,var(--mint),var(--cyan))}
+  .skin.locked::before{content:"LOCK";position:absolute;bottom:-8px;right:-8px;background:rgba(14,17,22,.9); color:#fff; font-weight:900; font-size:10px;padding:3px 6px;border-radius:8px;border:var(--cardBorder)}
+  .muted{opacity:.85}
+
+  /* Shop */
+  .shop-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+  .card{border:var(--cardBorder);background:var(--glass-strong);backdrop-filter:blur(12px);border-radius:14px;padding:12px;box-shadow:var(--bshadow)}
+  .card h4{margin:0 0 6px 0}
+  .price{font-weight:1000}
+
+  /* Mode Picker */
+  #modePicker{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(14,17,22,.15);z-index:40}
+  #modePicker .box{padding:24px;border-radius:16px;background:var(--glass-strong);backdrop-filter:blur(18px);border:var(--cardBorder);width:min(92vw,520px);box-shadow:var(--bshadow)}
+  #modePicker h3{margin:0 0 12px 0}
+  .mode-buttons{display:flex;gap:10px;flex-wrap:wrap}
 </style>
 </head>
 <body>
-<div id="wrap">
-  <canvas id="game"></canvas>
+<canvas id="game"></canvas>
 
-  <!-- HUD -->
-  <div class="hud">
-    <div class="row" style="margin-bottom:8px;">
-      <div class="pill">Score: <span id="score">0</span></div>
-      <div class="pill">Highscore: <span id="best">0</span></div>
-      <div class="pill">Waffe: <span id="weaponName">Pistol</span></div>
-      <div class="pill">Coins: <span id="coins">0</span></div>
-      <div class="pill">Shop: <b>B</b></div>
+<!-- HUD -->
+<div id="hud">
+  <div class="title">MINI SHOOTER</div>
+  <div class="hp">
+    <span style="opacity:.85;font-weight:900;">HP</span>
+    <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
+    <span id="hptext" style="min-width:26px;text-align:right;font-weight:1000;">3</span>
+  </div>
+  <div class="badge">SCORE <span id="score" style="font-weight:1000;margin-left:6px">0</span></div>
+  <div class="coins">⛁ <span id="coins">0</span></div>
+  <div class="mode" id="modeBadge" title="Spielmodus">OFFLINE</div>
+</div>
+<button id="btnLeave" style="display:none">Verlassen</button>
+
+<div id="hint">
+  <span id="hintDesktop">Klicke auf PLAY • WASD bewegen • Maus halten = Schießen</span>
+  <span id="hintMobile" style="display:none">Tippe auf PLAY • Links bewegen (Joystick) • Rechts tippen/halten = Schießen</span>
+</div>
+
+<!-- Footer credits -->
+<div id="footer">created by: <b>Aras</b> • First tester: <b>Bertuğ</b></div>
+
+<!-- Start-Overlay (nur wenn Pointer-Lock möglich) -->
+<div id="overlay">
+  <div class="box">
+    <h1 id="startTitle">CLICK TO START</h1>
+    <p id="startSub">Maus wird gesperrt • danach sofort loslegen</p>
+  </div>
+</div>
+
+<!-- Mobile: unsichtbare Touch-Zonen + Joystick-Canvas -->
+<div id="leftZone" class="touch-zone" style="display:none"></div>
+<div id="rightZone" class="touch-zone" style="display:none"></div>
+<canvas id="joy" width="1" height="1"></canvas>
+
+<!-- ======= LOBBY / MENU (sichtbar zuerst) ======= -->
+<div id="menu">
+  <div class="menu-card">
+    <div class="menu-head">
+      <div class="menu-title">MINI SHOOTER — Lobby</div>
+      <div class="menu-tabs">
+        <button class="btn" id="btnShop">Shop</button>
+        <button class="btn" id="btnSkins">Skins</button>
+        <button class="btn primary" id="btnPlay">Play</button>
+      </div>
     </div>
-    <div class="row">
-      <div class="pill">HP</div>
-      <div class="hearts" id="hearts"></div>
+    <div class="menu-body">
+      <div id="paneHome">
+        <div class="menu-row"><span class="pill">Modus:</span> <span class="muted">Free for All • Endlos</span></div>
+        <div class="menu-row"><span class="pill">Steuerung:</span> <span class="muted">Desktop: WASD + Maus • Mobile: Joystick + Tippen</span></div>
+      </div>
+      <div id="paneShop" style="display:none">
+        <div class="menu-row"><span class="pill">Deine Coins:</span> <b id="shopCoins">0</b></div>
+        <div class="shop-grid" id="shopList"></div>
+      </div>
+      <div id="paneSkins" style="display:none">
+        <div class="menu-row"><span class="pill">Wähle deinen Skin:</span></div>
+        <div class="skin-list" id="skinList"></div>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- Game Over -->
-  <div class="center" id="center">
-    <h1>Game Over</h1>
-    <p>Tippen oder Leertaste: Neustart</p>
-  </div>
-
-  <!-- Shop -->
-  <div class="overlay" id="overlay">
-    <div class="shop">
-      <div class="closeX" id="closeShop">✕</div>
-      <h2>🛒 Shop <span class="badge">Coins: <span id="coinsShop">0</span></span> <span class="badge">Highscore: <span id="bestShop">0</span></span></h2>
-      <div class="grid settings" id="settingsGrid"></div>
-      <div class="grid" id="shopGrid"></div>
-      <p class="small">Mobil: linker Stick bewegen, rechter Stick ziehen & loslassen zum Schießen, kurzer Tap = Quick Fire. Gegner haben 1 HP.</p>
+<!-- Mode Picker (öffnet über Lobby nach Klick auf Play) -->
+<div id="modePicker">
+  <div class="box">
+    <h3>Spielmodus wählen</h3>
+    <div class="menu-row"><span class="pill">Max. Personen Online:</span> <b>5</b> • <span class="pill">Max. Leben Online:</span> <b>4</b></div>
+    <div class="mode-buttons">
+      <button class="btn primary" id="modeOffline">Offline</button>
+      <button class="btn" id="modeOnline">Online (FFA, Beta)</button>
+      <button class="btn" id="modeCancel">Abbrechen</button>
     </div>
-  </div>
-
-  <!-- Mobile controls -->
-  <div class="mobile" id="mobile">
-    <div class="stick" id="moveStick"><div class="knob"></div></div>
-    <div class="stick" id="shootStick"><div class="knob"></div></div>
-    <div class="shopBtn" id="shopBtn">SHOP</div>
+    <p class="muted" style="margin-top:8px">Online (Beta): keine KI-Gegner, FFA, Platzhalter bis echte Multiplayer-Verbindung steht.</p>
   </div>
 </div>
 
 <script>
-(function(){
-"use strict";
+(()=> {
+  // --- Helpers / Env ---
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.maxTouchPoints||0) > 0;
 
-/* ===== Helpers ===== */
-const byId=(id)=>document.getElementById(id);
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const rand=(a,b)=>Math.random()*(b-a)+a;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const startTitle = document.getElementById('startTitle');
+  const startSub   = document.getElementById('startSub');
+  const hpfill = document.getElementById('hpfill');
+  const hptext = document.getElementById('hptext');
+  const scoreEl = document.getElementById('score');
+  const coinsEl = document.getElementById('coins');
+  const modeBadge = document.getElementById('modeBadge');
+  const btnLeave = document.getElementById('btnLeave');
 
-/* ===== Canvas ===== */
-const canvas=byId('game'), g=canvas.getContext('2d');
-function resize(){canvas.width=innerWidth;canvas.height=innerHeight;} addEventListener('resize',resize); resize();
+  const hintDesktop = document.getElementById('hintDesktop');
+  const hintMobile  = document.getElementById('hintMobile');
+  const leftZone = document.getElementById('leftZone');
+  const rightZone = document.getElementById('rightZone');
+  const joyCanvas = document.getElementById('joy'); const jctx = joyCanvas.getContext('2d');
 
-/* ===== Config ===== */
-const K={worldW:2200,worldH:1400,playerSpeed:220,bulletSpeed:700,enemySpeed:95,spawnEvery:1.6,coinPerKill:1,playerMaxHP:3,enemyHP:1};
-const SAVE_KEY='miniShooterV1';
+  const menu = document.getElementById('menu');
+  const btnPlay = document.getElementById('btnPlay');
+  const btnShop = document.getElementById('btnShop');
+  const btnSkins= document.getElementById('btnSkins');
+  const paneHome= document.getElementById('paneHome');
+  const paneShop= document.getElementById('paneShop');
+  const paneSkins= document.getElementById('paneSkins');
+  const skinList = document.getElementById('skinList');
+  const shopList = document.getElementById('shopList');
+  const shopCoins= document.getElementById('shopCoins');
 
-/* ===== Input (PC) ===== */
-const keys=new Set();
-addEventListener('keydown',e=>{keys.add(e.code);if(e.code==='KeyB')toggleShop(true);if(e.code==='Space'&&S.over)resetGame();});
-addEventListener('keyup',e=>keys.delete(e.code));
-const mouse={x:canvas.width/2,y:canvas.height/2,down:false};
-canvas.addEventListener('mousemove',e=>{const r=canvas.getBoundingClientRect();mouse.x=e.clientX-r.left;mouse.y=e.clientY-r.top;});
-canvas.addEventListener('mousedown',()=>mouse.down=true);
-addEventListener('mouseup',()=>mouse.down=false);
+  const modePicker = document.getElementById('modePicker');
+  const modeOfflineBtn = document.getElementById('modeOffline');
+  const modeOnlineBtn  = document.getElementById('modeOnline');
+  const modeCancelBtn  = document.getElementById('modeCancel');
 
-/* ===== Mobile BS Controls (2 Sticks) ===== */
-const isTouch='ontouchstart' in window||navigator.maxTouchPoints>0;
-byId('mobile').style.display=isTouch?'block':'none';
+  // Detect iframe (sandbox) and pointer-lock availability
+  const inIframe = (()=>{ try{ return window.self !== window.top; }catch(e){ return true; } })();
+  const pointerLockAPISupported = !!(canvas.requestPointerLock && 'pointerLockElement' in document);
+  let POINTER_LOCK_ENABLED = pointerLockAPISupported && !inIframe; // Disable in sandboxed iframes
 
-function makeStick(el){
-  const knob=el.querySelector('.knob');
-  const o={active:false, vec:{x:0,y:0}};
-  const max=50;
-  function start(x,y){ o.active=true; update(x,y); }
-  function update(x,y){
-    const r=el.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
-    let dx=x-cx, dy=y-cy; const len=Math.hypot(dx,dy);
-    const cl=Math.min(max,len||1);
-    if(len>0){dx=dx/len*cl; dy=dy/len*cl;}
-    knob.style.transform=`translate(${dx}px,${dy}px) translate(-50%,-50%)`;
-    o.vec.x=dx/max; o.vec.y=dy/max;
-  }
-  function end(){
-    const last={x:o.vec.x,y:o.vec.y};
-    o.active=false; o.vec.x=0; o.vec.y=0;
-    knob.style.transform='translate(-50%,-50%)';
-    if(el.id==='shootStick'){ handleShootRelease(last); }
-  }
-  el.addEventListener('touchstart',e=>{e.preventDefault();const t=e.changedTouches[0];start(t.clientX,t.clientY)},{passive:false});
-  el.addEventListener('touchmove', e=>{e.preventDefault();const t=e.changedTouches[0];update(t.clientX,t.clientY)},{passive:false});
-  el.addEventListener('touchend',  e=>{e.preventDefault();end();},{passive:false});
-  el.addEventListener('touchcancel',e=>{e.preventDefault();end();},{passive:false});
-  return o;
-}
-const moveStick=makeStick(byId('moveStick'));
-const shootStick=makeStick(byId('shootStick'));
-byId('shopBtn').addEventListener('touchstart',e=>{e.preventDefault();toggleShop(true)},{passive:false});
-
-/* ===== Shop & Settings ===== */
-const WEAPONS=[
-  {id:'pistol', name:'Pistol',  price:0,  rate:4, dmg:1, multi:1, spread:0},
-  {id:'smg',    name:'SMG',     price:6,  rate:9, dmg:1, multi:1, spread:0.05},
-  {id:'shotgun',name:'Shotgun', price:10, rate:2, dmg:1, multi:3, spread:0.18}
-];
-const getW=id=>WEAPONS.find(w=>w.id===id);
-
-const overlay=byId('overlay'), shopGrid=byId('shopGrid'), coinsShop=byId('coinsShop'), bestShop=byId('bestShop'), settingsGrid=byId('settingsGrid');
-byId('closeShop').onclick=()=>toggleShop(false);
-overlay.addEventListener('click',e=>{if(e.target===overlay)toggleShop(false);});
-function toggleShop(on){ overlay.style.display=on?'flex':'none'; if(on) renderShop(); }
-
-function flashBtn(btn){ const old=btn.textContent; btn.textContent='✔'; setTimeout(()=>btn.textContent=old,700); }
-
-function renderShop(){
-  coinsShop.textContent=S.coins;
-  bestShop.textContent=S.best|0;
-
-  // Speicher-Card
-  settingsGrid.innerHTML='';
-  const card=document.createElement('div'); card.className='card';
-  card.innerHTML=`
-    <div><b>⚙️ Speicher</b></div>
-    <div class="small">Speichert Coins, gekaufte Waffen, aktive Waffe & Highscore lokal.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button class="btn" id="saveBtn">Speichern</button>
-      <button class="btn" id="loadBtn">Laden</button>
-      <button class="btn" id="resetBtn">Reset Speicher</button>
-    </div>`;
-  settingsGrid.appendChild(card);
-  card.querySelector('#saveBtn').onclick=()=>{ saveGame(); flashBtn(card.querySelector('#saveBtn')); };
-  card.querySelector('#loadBtn').onclick=()=>{ loadGame(true); flashBtn(card.querySelector('#loadBtn')); renderShop(); updateHUD(); };
-  card.querySelector('#resetBtn').onclick=()=>{ if(confirm('Speicher wirklich löschen?')){ clearSave(); flashBtn(card.querySelector('#resetBtn')); renderShop(); updateHUD(); } };
-
-  // Waffen
-  shopGrid.innerHTML='';
-  for(const w of WEAPONS){
-    const owned=S.owned.has(w.id),active=S.p.weapon===w.id;
-    const c=document.createElement('div'); c.className='card';
-    c.innerHTML=`<div><b>${w.name}</b> ${owned?(active?'<span class="badge">Aktiv</span>':'<span class="badge">Gekauft</span>'):''}</div>
-                 <div class="badge">Preis: ${w.price}c</div>`;
-    const btn=document.createElement('button'); btn.className='btn';
-    if(!owned){
-      btn.textContent='Kaufen'; btn.disabled=S.coins<w.price;
-      btn.onclick=()=>{ if(S.coins>=w.price){ S.coins-=w.price; S.owned.add(w.id); updateHUD(); renderShop(); saveGame(); } };
-    }else{
-      btn.textContent=active?'Aktiv':'Ausrüsten';
-      btn.onclick=()=>{ S.p.weapon=w.id; updateHUD(); renderShop(); saveGame(); };
-    }
-    c.appendChild(btn); shopGrid.appendChild(c);
-  }
-}
-
-/* ===== State + Speicher ===== */
-let S;
-function newRunBase(){
-  return {
-    t:0, cam:{x:0,y:0},
-    p:{x:K.worldW/2,y:K.worldH/2,hp:K.playerMaxHP,cd:0,weapon:'pistol'},
-    bullets:[], enemies:[], score:0, wave:1, nextSpawn:0,
-    coins:0, owned:new Set(['pistol']),
-    best:0, over:false, hitCD:0
+  // ==== Persistence (Inventory/Coins) ====
+  const INV_KEY = 'ms_inv_v1';
+  const SKIN_KEY = 'ms_skin_v1';
+  const DEFAULT_INV = {
+    coins: 0,
+    items: { trail: false },
+    upgrades: { firerate: 0, hp: 0 }, // firerate max 3, hp max +2 (Offline). Online capped.
+    ownedSkins: { aqua:true, red:true, purple:false, gold:false, mint:true }
   };
-}
-function applyMetaFromSave(meta){
-  if(!meta) return;
-  S.coins = meta.coins ?? S.coins;
-  S.best  = meta.best ?? S.best;
-  S.p.weapon = meta.weapon ?? S.p.weapon;
-  if(Array.isArray(meta.owned)){ S.owned=new Set(meta.owned); if(!S.owned.has('pistol')) S.owned.add('pistol'); }
-}
-function resetGame(){
-  S=newRunBase();
-  const meta = loadMeta();
-  applyMetaFromSave(meta);
-  spawnEnemy(); spawnEnemy();
-  updateHUD(); byId('center').style.display='none';
-}
-function serializeMeta(){ return {version:1, coins:S.coins|0, best:S.best|0, weapon:S.p.weapon, owned:[...S.owned]}; }
-function saveGame(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(serializeMeta())); }catch(e){} }
-function loadMeta(){ try{ const raw=localStorage.getItem(SAVE_KEY); if(!raw) return null; const obj=JSON.parse(raw); return (obj&&typeof obj==='object')?obj:null; }catch(e){ return null; } }
-function loadGame(applyNow=false){ const meta=loadMeta(); if(!meta) return false; if(applyNow) applyMetaFromSave(meta); return true; }
-function clearSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
-
-resetGame();
-let autosaveT=0;
-addEventListener('beforeunload', saveGame);
-
-/* ===== Shooting ===== */
-function handleShootRelease(vec){
-  const mag=Math.hypot(vec.x,vec.y);
-  if(mag<0.3){
-    // Quick Fire: schießt Richtung nächster Gegner (nur ein Schuss, kein Tracking)
-    let target=null,best=Infinity;
-    for(const e of S.enemies){const d=(e.x-S.p.x)**2+(e.y-S.p.y)**2; if(d<best){best=d; target=e;}}
-    if(target){ shootAt(target.x,target.y); }
-  }else{
-    const ang=Math.atan2(vec.y,vec.x);
-    shootDir(ang);
+  function loadInv(){
+    try{ const raw = JSON.parse(localStorage.getItem(INV_KEY)||'{}');
+      return {
+        coins: (raw.coins??DEFAULT_INV.coins),
+        items: Object.assign({}, DEFAULT_INV.items, raw.items||{}),
+        upgrades: Object.assign({}, DEFAULT_INV.upgrades, raw.upgrades||{}),
+        ownedSkins: Object.assign({}, DEFAULT_INV.ownedSkins, raw.ownedSkins||{}),
+      };
+    } catch(e){ return JSON.parse(JSON.stringify(DEFAULT_INV)); }
   }
-}
-function shootAt(wx,wy){
-  const w=getW(S.p.weapon);
-  if(S.p.cd>0) return;
-  const ang=Math.atan2(wy-S.p.y,wx-S.p.x);
-  for(let i=0;i<w.multi;i++){
-    const a=ang+(w.multi>1?(i-(w.multi-1)/2)*w.spread:(Math.random()*2-1)*w.spread);
-    S.bullets.push({x:S.p.x,y:S.p.y,vx:Math.cos(a)*K.bulletSpeed,vy:Math.sin(a)*K.bulletSpeed,life:0.9,dmg:w.dmg});
-  }
-  S.p.cd=1/w.rate;
-}
-function shootDir(ang){
-  const w=getW(S.p.weapon);
-  if(S.p.cd>0) return;
-  for(let i=0;i<w.multi;i++){
-    const a=ang+(w.multi>1?(i-(w.multi-1)/2)*w.spread:(Math.random()*2-1)*w.spread);
-    S.bullets.push({x:S.p.x,y:S.p.y,vx:Math.cos(a)*K.bulletSpeed,vy:Math.sin(a)*K.bulletSpeed,life:0.9,dmg:w.dmg});
-  }
-  S.p.cd=1/w.rate;
-}
+  function saveInv(){ localStorage.setItem(INV_KEY, JSON.stringify(INV)); refreshCoins(); }
+  let INV = loadInv();
 
-/* ===== Enemies ===== */
-function spawnEnemy(){
-  const m=40, side=(Math.random()*4)|0;
-  let x,y;
-  if(side==0){x=rand(0,K.worldW);y=-m}
-  else if(side==1){x=K.worldW+m;y=rand(0,K.worldH)}
-  else if(side==2){x=rand(0,K.worldW);y=K.worldH+m}
-  else{x=-m;y=rand(0,K.worldH)}
-  S.enemies.push({x,y,hp:K.enemyHP});
-}
+  function refreshCoins(){ coinsEl.textContent = INV.coins; shopCoins.textContent = INV.coins; }
 
-/* ===== Update ===== */
-function update(dt){
-  if(S.over) return;
-  S.t+=dt;
+  // Mode state
+  let GAME_MODE = 'OFFLINE'; // or 'ONLINE'
+  const MAX_ONLINE_PLAYERS = 5;
+  const MAX_ONLINE_LIVES = 4;
+  modeBadge.textContent = GAME_MODE;
 
-  // Movement
-  let vx=0,vy=0;
-  if(keys.has('KeyW'))vy-=1; if(keys.has('KeyS'))vy+=1;
-  if(keys.has('KeyA'))vx-=1; if(keys.has('KeyD'))vx+=1;
-  if(moveStick.active){ vx+=moveStick.vec.x; vy+=moveStick.vec.y; }
-  const len=Math.hypot(vx,vy)||1; vx/=len; vy/=len;
-  S.p.x=clamp(S.p.x+vx*K.playerSpeed*dt,0,K.worldW);
-  S.p.y=clamp(S.p.y+vy*K.playerSpeed*dt,0,K.worldH);
-
-  // PC Schießen (Maus)
-  if(mouse.down && S.p.cd<=0){ shootAt(S.cam.x+mouse.x, S.cam.y+mouse.y); }
-  if(S.p.cd>0) S.p.cd-=dt;
-
-  // Bullets
-  for(const b of S.bullets){ b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; }
-  S.bullets=S.bullets.filter(b=>b.life>0 && b.x>-80 && b.y>-80 && b.x<K.worldW+80 && b.y<K.worldH+80);
-
-  // Enemies move to player
-  for(const e of S.enemies){
-    const dx=S.p.x-e.x, dy=S.p.y-e.y, d=Math.hypot(dx,dy)||1;
-    e.x+=dx/d*K.enemySpeed*dt; e.y+=dy/d*K.enemySpeed*dt;
+  // UI je nach Gerät
+  if(isMobile){
+    startTitle.textContent = 'TAP TO START';
+    startSub.textContent   = 'Links bewegen • Rechts schießen • Heals aufsammeln';
+    hintDesktop.style.display='none';
+    hintMobile.style.display='inline';
+    leftZone.style.display = rightZone.style.display = 'block';
+  } else if (!POINTER_LOCK_ENABLED) {
+    startTitle.textContent = 'PRESS START';
+    startSub.textContent   = 'Maus bleibt frei (kein Pointer-Lock)';
+    hintDesktop.textContent = 'Klicke auf PLAY • WASD bewegen • Maus halten = Schießen';
   }
 
-  // Collisions bullet -> enemy
-  let killed=false;
-  for(let i=S.enemies.length-1;i>=0;i--){
-    const e=S.enemies[i];
-    let dead=false;
-    for(let j=S.bullets.length-1;j>=0;j--){
-      const b=S.bullets[j];
-      if((b.x-e.x)**2+(b.y-e.y)**2 < 18*18){
-        e.hp-=b.dmg; S.bullets.splice(j,1);
-        if(e.hp<=0){ dead=true; break; }
+  function resize(){
+    const dpr = Math.min(2, window.devicePixelRatio||1);
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(Math.max(1,innerHeight) * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    joyCanvas.width = innerWidth; joyCanvas.height = innerHeight; // UI in CSS-Pixeln
+  }
+  addEventListener('resize', resize, {passive:true}); resize(); refreshCoins();
+
+  // Safe Pointer lock wrapper
+  function lock(){
+    if(isMobile || !POINTER_LOCK_ENABLED) return; // no-op
+    try { canvas.requestPointerLock(); }
+    catch(err){
+      console.warn('Pointer-Lock deaktiviert (caught):', err);
+      POINTER_LOCK_ENABLED = false;
+      overlay.style.display = 'none';
+    }
+  }
+  document.addEventListener('pointerlockerror', (e)=>{
+    console.warn('Pointer-Lock error event:', e);
+    POINTER_LOCK_ENABLED = false;
+    overlay.style.display = 'none';
+  });
+  document.addEventListener('pointerlockchange', ()=>{
+    if(isMobile || !pointerLockAPISupported) return;
+    overlay.style.display = (document.pointerLockElement===canvas)?'none':'flex';
+  });
+
+  // ======= LOBBY UI =======
+  function showPane(which){
+    paneHome.style.display = which==='home'? 'block':'none';
+    paneShop.style.display = which==='shop'? 'block':'none';
+    paneSkins.style.display= which==='skins'?'block':'none';
+  }
+  showPane('home');
+
+  btnShop.addEventListener('click', ()=>{showPane('shop'); renderShop();});
+  btnSkins.addEventListener('click', ()=>{showPane('skins');});
+  btnPlay.addEventListener('click', ()=>{ modePicker.style.display='flex'; });
+  modeCancelBtn.addEventListener('click', ()=>{ modePicker.style.display='none'; });
+
+  // ======= Mode Auswahl =======
+  modeOfflineBtn.addEventListener('click', ()=>{
+    GAME_MODE='OFFLINE'; modeBadge.textContent=GAME_MODE; modePicker.style.display='none';
+    startFromLobby();
+  });
+  modeOnlineBtn.addEventListener('click', ()=>{
+    GAME_MODE='ONLINE'; modeBadge.textContent=`${GAME_MODE} 1/${MAX_ONLINE_PLAYERS}`; modePicker.style.display='none';
+    startFromLobby();
+  });
+
+  function startFromLobby(){
+    menu.style.display='none';
+    btnLeave.style.display='inline-block';
+    if(isMobile || !POINTER_LOCK_ENABLED){ resetGame(); startGame(); }
+    else{ overlay.style.display='flex'; }
+  }
+
+  // ======= Shop =======
+  const SHOP = [
+    { id:'trail', type:'toggle', title:'Comet Trail', desc:'Kosmetik: Partikelspur hinter Schüssen', price:50 },
+    { id:'firerate', type:'upgrade', title:'Fire Rate+', desc:'Schneller schießen', price:[100,150,200], max:3 },
+    { id:'hp', type:'upgrade', title:'Max HP+', desc:'Maximale Leben erhöhen (nur Offline über 4)', price:[120,180], max:2 },
+  ];
+
+  function renderShop(){
+    refreshCoins();
+    shopList.innerHTML='';
+    for(const item of SHOP){
+      const card=document.createElement('div'); card.className='card';
+      const state = (item.type==='toggle')? (INV.items[item.id]?'Aktiv':'Inaktiv')
+                    : (INV.upgrades[item.id]||0)+` / ${item.max}`;
+      let priceTxt = '';
+      if(item.type==='toggle') priceTxt = !INV.items[item.id] ? `${item.price}⛁` : 'gekauft';
+      if(item.type==='upgrade'){
+        const lvl = INV.upgrades[item.id]||0;
+        priceTxt = (lvl < item.max) ? `${item.price[lvl]}⛁` : 'max';
+      }
+      card.innerHTML = `
+        <h4>${item.title}</h4>
+        <div class="muted" style="margin-bottom:6px">${item.desc}</div>
+        <div class="menu-row">
+          <span class="pill">Status:</span> <b>${state}</b>
+          <span class="pill">Preis:</span> <b class="price">${priceTxt}</b>
+        </div>
+      `;
+      const btn=document.createElement('button'); btn.className='btn';
+      if(item.type==='toggle'){
+        btn.textContent = INV.items[item.id] ? 'Deaktivieren' : 'Kaufen & Aktivieren';
+        btn.onclick=()=>{
+          if(!INV.items[item.id]){
+            if(INV.coins>=item.price){ INV.coins-=item.price; INV.items[item.id]=true; saveInv(); renderShop(); }
+            else alert('Nicht genug Coins.');
+          } else { INV.items[item.id]=false; saveInv(); renderShop(); }
+        };
+      } else if(item.type==='upgrade'){
+        btn.textContent = 'Upgrade';
+        btn.disabled = (INV.upgrades[item.id]||0) >= item.max;
+        btn.onclick=()=>{
+          const lvl = INV.upgrades[item.id]||0; if(lvl>=item.max) return;
+          const cost = item.price[lvl];
+          if(INV.coins>=cost){ INV.coins-=cost; INV.upgrades[item.id]=lvl+1; saveInv(); renderShop(); }
+          else alert('Nicht genug Coins.');
+        };
+      }
+      card.appendChild(btn);
+      shopList.appendChild(card);
+    }
+
+    // Skins-Angebote (nur gelockte)
+    const SKINS_DATA = [
+      {id:'purple', name:'Purple', price:60},
+      {id:'gold',   name:'Gold',   price:80}
+    ];
+    const lockedSkins = SKINS_DATA.filter(s=>!(INV.ownedSkins||{})[s.id]);
+    if(lockedSkins.length){
+      const wrap=document.createElement('div'); wrap.className='card';
+      wrap.innerHTML='<h4>Skins freischalten</h4>';
+      const row=document.createElement('div'); row.className='menu-row';
+      for(const s of lockedSkins){
+        const b=document.createElement('button'); b.className='btn';
+        b.textContent = `${s.name} – ${s.price}⛁`;
+        b.onclick=()=>{ if(confirm(`${s.name} für ${s.price}⛁ kaufen?`)) tryBuySkin(s.id); };
+        row.appendChild(b);
+      }
+      wrap.appendChild(row); shopList.appendChild(wrap);
+    }
+  }
+
+  // ============ GAME STATE ============
+  let S=null, RAF=null;
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const ang=(x1,y1,x2,y2)=>Math.atan2(y2-y1,x2-x1);
+  const d2=(x1,y1,x2,y2)=>{const dx=x2-x1,dy=y2-y1;return dx*dx+dy*dy};
+
+  const skins = [
+    {id:'aqua',   name:'Aqua',   colors:['#6ae1df','#7cb8ff'], price:0},
+    {id:'red',    name:'Red',    colors:['#ff8aa0','#ffb6c3'], price:0},
+    {id:'purple', name:'Purple', colors:['#bfa8ff','#8eb1ff'], price:60},
+    {id:'gold',   name:'Gold',   colors:['#ffd98a','#ffb782'], price:80},
+    {id:'mint',   name:'Mint',   colors:['#82f3c6','#6ae1df'], price:0}
+  ];
+  let currentSkinId = localStorage.getItem(SKIN_KEY) || 'aqua';
+  function getSkinById(id){ return skins.find(s=>s.id===id) || skins[0]; }
+  function ownSkin(id){ return !!INV.ownedSkins[id]; }
+  function tryBuySkin(id){
+    const s = skins.find(x=>x.id===id); if(!s) return;
+    if(ownSkin(id)) return;
+    const price = {purple:60, gold:80}[id]||0;
+    if(INV.coins >= price){ INV.coins -= price; INV.ownedSkins[id]=true; saveInv(); renderSkinChoices(); renderShop(); }
+    else alert('Nicht genug Coins.');
+  }
+
+  function resetGame(){
+    const skin = getSkinById(currentSkinId);
+    const offlineHpMax = 3 + (INV.upgrades.hp||0);
+    const hpCap = (GAME_MODE==='ONLINE') ? 4 : Infinity; // Online cap 4
+    const hpMax = Math.min(offlineHpMax, hpCap);
+    S = {
+      run:true, score:0,
+      px: innerWidth/2, py: innerHeight/2, pr:13, speed: isMobile? 300 : 260,
+      hp: hpMax, hpMax,
+      keys:{}, mouse:{x:innerWidth/2, y:innerHeight/2, down:false},
+      bullets:[], enemies:[], heals:[],
+      spawnT:0, shootT:0, healT: 3.0,
+      aimR:52,
+      skin,
+      moveTouchId:null, moveStartX:0, moveStartY:0, moveDX:0, moveDY:0,
+      shootTouchId:null
+    };
+    updHP(); updScore();
+    if(GAME_MODE==='OFFLINE'){
+      for(let i=0;i<8;i++) spawnEnemy();
+    }
+    clearJoystick();
+  }
+
+  function updHP(){
+    if(!S) return;
+    hptext.textContent = S.hp;
+    const pct = S.hp/S.hpMax;
+    hpfill.style.width = (pct*100)+'%';
+    hpfill.style.background = pct>0.66 ? 'linear-gradient(90deg,var(--mint),var(--cyan))'
+                          : pct>0.33 ? 'linear-gradient(90deg,var(--amber),#ffb782)'
+                                     : 'linear-gradient(90deg,var(--rose),#ffb6c3)';
+  }
+  function updScore(){ scoreEl.textContent = S? S.score: 0; refreshCoins(); }
+
+  function leaveToLobby(){
+    try{ document.exitPointerLock?.(); }catch(_){ }
+    if(S) S.run=false; cancelAnimationFrame(RAF); RAF=null;
+    btnLeave.style.display='none';
+    menu.style.display='flex';
+    modeBadge.textContent = GAME_MODE==='ONLINE' ? `${GAME_MODE} 1/${MAX_ONLINE_PLAYERS}` : 'OFFLINE';
+    ctx.clearRect(0,0,innerWidth,innerHeight);
+  }
+  btnLeave.addEventListener('click', leaveToLobby);
+
+  // Keyboard (Desktop)
+  addEventListener('keydown', e=>{
+    if(!S) return;
+    S.keys[e.code]=true;
+    if(e.code==='Escape'){ document.exitPointerLock?.(); leaveToLobby(); }
+    if(!S.run && !isMobile && e.code==='Space'){ resetGame(); startGame(); }
+  });
+  addEventListener('keyup', e=>{ if(S) S.keys[e.code]=false; });
+
+  // Mouse (Desktop)
+  canvas.addEventListener('mousedown', ()=>{ if(S) { S.mouse.down=true; if(!isMobile && POINTER_LOCK_ENABLED) lock(); }});
+  addEventListener('mouseup', ()=>{ if(S) S.mouse.down=false; });
+  addEventListener('mousemove', e=>{
+    if(!S) return;
+    if(!isMobile && POINTER_LOCK_ENABLED && document.pointerLockElement===canvas){
+      S.mouse.x = clamp(S.mouse.x + e.movementX, 0, innerWidth);
+      S.mouse.y = clamp(S.mouse.y + e.movementY, 0, innerHeight);
+    } else {
+      S.mouse.x = e.clientX; S.mouse.y = e.clientY;
+    }
+  }, {passive:true});
+
+  // Touch (Mobile) — Glas-Joystick
+  function drawJoystick(cx,cy,dx,dy){
+    jctx.clearRect(0,0,joyCanvas.width, joyCanvas.height);
+    jctx.save();
+    // Outer glass ring
+    jctx.fillStyle='rgba(255,255,255,.6)'; jctx.strokeStyle='rgba(14,17,22,.25)'; jctx.lineWidth=2;
+    jctx.beginPath(); jctx.arc(cx,cy,60,0,Math.PI*2); jctx.fill(); jctx.stroke();
+    // neon glow
+    jctx.shadowBlur=16; jctx.shadowColor='rgba(124,184,255,.45)';
+    // knob
+    const kx=cx+dx, ky=cy+dy;
+    jctx.fillStyle='rgba(124,184,255,.65)'; jctx.strokeStyle='rgba(14,17,22,.25)'; jctx.lineWidth=2;
+    jctx.beginPath(); jctx.arc(kx,ky,26,0,Math.PI*2); jctx.fill(); jctx.stroke();
+    jctx.restore();
+  }
+  function clearJoystick(){ jctx.clearRect(0,0,joyCanvas.width, joyCanvas.height); }
+  function isLeft(x){ return x < innerWidth*0.5; }
+
+  if(isMobile){
+    canvas.addEventListener('touchstart', (e)=>{
+      e.preventDefault(); if(!S) return;
+      for(const t of e.changedTouches){
+        if(isLeft(t.clientX) && S.moveTouchId===null){
+          S.moveTouchId = t.identifier;
+          S.moveStartX = t.clientX; S.moveStartY = t.clientY;
+          S.moveDX=0; S.moveDY=0; drawJoystick(S.moveStartX,S.moveStartY,0,0);
+        } else if(!isLeft(t.clientX) && S.shootTouchId===null){
+          S.shootTouchId=t.identifier; S.mouse.down=true;
+          S.mouse.x=t.clientX; S.mouse.y=t.clientY;
+        }
+      }
+    }, {passive:false});
+
+    canvas.addEventListener('touchmove', (e)=>{
+      e.preventDefault(); if(!S) return;
+      for(const t of e.changedTouches){
+        if(t.identifier===S.moveTouchId){
+          const dx=t.clientX-S.moveStartX, dy=t.clientY-S.moveStartY;
+          const r=Math.hypot(dx,dy), maxR=60, s=r>maxR?maxR/r:1;
+          S.moveDX=dx*s; S.moveDY=dy*s; drawJoystick(S.moveStartX,S.moveStartY,S.moveDX,S.moveDY);
+        }
+        if(t.identifier===S.shootTouchId){ S.mouse.x=t.clientX; S.mouse.y=t.clientY; }
+      }
+    }, {passive:false});
+
+    function endTouch(e){
+      e.preventDefault(); if(!S) return;
+      for(const t of e.changedTouches){
+        if(t.identifier===S.moveTouchId){ S.moveTouchId=null; S.moveDX=0; S.moveDY=0; clearJoystick(); }
+        if(t.identifier===S.shootTouchId){ S.shootTouchId=null; S.mouse.down=false; }
       }
     }
-    if(dead){
-      S.enemies.splice(i,1);
-      S.score+=10; S.coins+=K.coinPerKill; killed=true;
+    canvas.addEventListener('touchend', endTouch, {passive:false});
+    canvas.addEventListener('touchcancel', endTouch, {passive:false});
+  }
+
+  /* ======= RENDER HELPERS (Neo‑Cartoon) ======= */
+  function glow(fill, blur){ ctx.shadowBlur=blur; ctx.shadowColor=fill; }
+  function noGlow(){ ctx.shadowBlur=0; }
+  function circleOutline(x,y,r,fill){
+    glow('rgba(124,184,255,.35)', 12);
+    ctx.fillStyle=fill; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+    noGlow(); ctx.lineWidth=2; ctx.strokeStyle='rgba(14,17,22,.25)'; ctx.stroke();
+  }
+  function capsule(x1,y1,x2,y2,w,fill){
+    const a=Math.atan2(y2-y1,x2-x1), len=Math.hypot(x2-x1,y2-y1);
+    ctx.save(); ctx.translate(x1,y1); ctx.rotate(a);
+    glow('rgba(255,217,138,.35)',10);
+    ctx.fillStyle=fill; ctx.beginPath();
+    ctx.moveTo(0,-w/2); ctx.lineTo(len,-w/2); ctx.arc(len,0,w/2,-Math.PI/2,Math.PI/2);
+    ctx.lineTo(0,w/2); ctx.arc(0,0,w/2,Math.PI/2,-Math.PI/2);
+    ctx.closePath(); ctx.fill(); noGlow();
+    ctx.lineWidth=2; ctx.strokeStyle='rgba(14,17,22,.25)'; ctx.stroke();
+    ctx.restore();
+  }
+
+  // Spawns
+  function spawnEnemy(){
+    if(GAME_MODE==='ONLINE') return; // Online: keine KI
+    const side=(Math.random()*4)|0; let x=0,y=0,m=24;
+    if(side===0){x=Math.random()*innerWidth; y=-m;}
+    if(side===1){x=innerWidth+m; y=Math.random()*innerHeight;}
+    if(side===2){x=Math.random()*innerWidth; y=innerHeight+m;}
+    if(side===3){x=-m; y=Math.random()*innerHeight;}
+    const speed=80+Math.random()*80+Math.min(160,S.score*.7);
+    const r=13+Math.random()*9;
+    S.enemies.push({x,y,r,speed});
+  }
+  function spawnHeal(){
+    if(GAME_MODE==='ONLINE') return; // Online: keine Heals
+    const margin=40;
+    const x = margin + Math.random()*(innerWidth - margin*2);
+    const y = margin + Math.random()*(innerHeight - margin*2);
+    S.heals.push({x,y,r:15,life:9+Math.random()*6,age:0});
+  }
+
+  // Start/Loop
+  function startGame(){
+    if(!S) resetGame();
+    let last=performance.now();
+    function loop(now){
+      if(!S.run) return;
+      const dt=Math.min(.033,(now-last)/1000); last=now;
+
+      // Movement
+      let vx=0, vy=0;
+      if(S.keys['KeyW']||S.keys['ArrowUp']) vy-=1;
+      if(S.keys['KeyS']||S.keys['ArrowDown']) vy+=1;
+      if(S.keys['KeyA']||S.keys['ArrowLeft']) vx-=1;
+      if(S.keys['KeyD']||S.keys['ArrowRight']) vx+=1;
+      if(isMobile && S.moveTouchId!==null){ vx = S.moveDX/60; vy = S.moveDY/60; }
+      if(vx||vy){ const L=Math.hypot(vx,vy); vx/=L; vy/=L; }
+      S.px = clamp(S.px + vx*S.speed*dt, S.pr, innerWidth - S.pr);
+      S.py = clamp(S.py + vy*S.speed*dt, S.pr, innerHeight - S.pr);
+
+      // Shooting
+      S.shootT -= dt;
+      const baseCD = 0.12; const cd = Math.max(0.06, baseCD - 0.02*(INV.upgrades.firerate||0));
+      if(S.mouse.down && S.shootT<=0){
+        let a=ang(S.px,S.py,S.mouse.x,S.mouse.y);
+        if(GAME_MODE==='OFFLINE'){
+          let best=null,bestD=Infinity,R2=S.aimR*S.aimR;
+          for(const e of S.enemies){
+            const dx=e.x-S.mouse.x,dy=e.y-S.mouse.y,dd=dx*dx+dy*dy;
+            if(dd<R2 && dd<bestD){bestD=dd;best=e;}
+          }
+          if(best) a = ang(S.px,S.py,best.x,best.y);
+        }
+        const spd=520;
+        S.bullets.push({x:S.px+Math.cos(a)*S.pr,y:S.py+Math.sin(a)*S.pr,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd,life:.9,trailAge:0});
+        S.shootT = cd;
+      }
+
+      // Bullets
+      for(let i=S.bullets.length-1;i>=0;i--){
+        const b=S.bullets[i]; b.x+=b.vx*dt; b.y+=b.vy*dt; b.life-=dt; b.trailAge+=dt;
+        if(b.life<=0||b.x<0||b.x>innerWidth||b.y<0||b.y>innerHeight) S.bullets.splice(i,1);
+      }
+
+      // Spawn pacing (nur Offline)
+      if(GAME_MODE==='OFFLINE'){
+        S.spawnT -= dt; if(S.spawnT<=0){ spawnEnemy(); S.spawnT=Math.max(.2, .8 - S.score*.01); }
+        S.healT  -= dt; if(S.healT<=0){ if(Math.random()<0.7) spawnHeal(); S.healT = 6 + Math.random()*4; }
+      }
+
+      // Enemies (nur Offline)
+      if(GAME_MODE==='OFFLINE'){
+        for(let i=S.enemies.length-1;i>=0;i--){
+          const e=S.enemies[i]; const a=ang(e.x,e.y,S.px,S.py);
+          e.x+=Math.cos(a)*e.speed*dt; e.y+=Math.sin(a)*e.speed*dt;
+          // bullet hits
+          let hit=false;
+          for(let j=S.bullets.length-1;j>=0;j--){
+            const b=S.bullets[j];
+            if(d2(b.x,b.y,e.x,e.y) <= e.r*e.r){ S.bullets.splice(j,1); hit=true; break; }
+          }
+          if(hit){ S.enemies.splice(i,1); S.score++; INV.coins += 1; saveInv(); updScore(); continue; }
+          // player hit
+          if(d2(S.px,S.py,e.x,e.y) <= (S.pr+e.r)*(S.pr+e.r)){
+            S.hp--; updHP(); S.enemies.splice(i,1);
+            if(S.hp<=0){ gameOver(); return; }
+          }
+        }
+      }
+
+      // Heals (nur Offline)
+      if(GAME_MODE==='OFFLINE'){
+        for(let i=S.heals.length-1;i>=0;i--){
+          const h=S.heals[i]; h.age+=dt; h.life-=dt;
+          if(d2(S.px,S.py,h.x,h.y) <= (S.pr+h.r)*(S.pr+h.r)){
+            if(S.hp<S.hpMax){ S.hp++; updHP(); }
+            S.heals.splice(i,1); continue;
+          }
+          if(h.life<=0) S.heals.splice(i,1);
+        }
+      }
+
+      // ===== RENDER =====
+      ctx.clearRect(0,0,innerWidth,innerHeight);
+
+      // Soft grid dots (dezent)
+      const step=46;
+      ctx.fillStyle='rgba(124,184,255,.18)';
+      for(let x=0;x<=innerWidth;x+=step){
+        for(let y=0;y<=innerHeight;y+=step){
+          ctx.beginPath(); ctx.arc(x+6,y+6,1.6,0,Math.PI*2); ctx.fill();
+        }
+      }
+
+      // Aim Kreis + Crosshair (leicht glasig)
+      ctx.save(); glow('rgba(124,184,255,.35)',8);
+      ctx.strokeStyle='rgba(14,17,22,.25)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(S.mouse.x,S.mouse.y,S.aimR,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); const size=14;
+      ctx.moveTo(S.mouse.x-size,S.mouse.y); ctx.lineTo(S.mouse.x+size,S.mouse.y);
+      ctx.moveTo(S.mouse.x,S.mouse.y-size); ctx.lineTo(S.mouse.x,S.mouse.y+size);
+      ctx.stroke(); noGlow(); ctx.restore();
+
+      // Bullets (glasig gelb)
+      for(const b of S.bullets){
+        if(INV.items.trail){
+          const tx=b.x-b.vx*0.04, ty=b.y-b.vy*0.04;
+          capsule(tx,ty,b.x,b.y,8,'rgba(255,255,255,.9)');
+        }
+        const tx=b.x-b.vx*.03, ty=b.y-b.vy*.03;
+        capsule(tx,ty,b.x,b.y,8,'rgba(255,217,138,.95)');
+      }
+
+      // Enemies (Offline)
+      if(GAME_MODE==='OFFLINE'){
+        for(const e of S.enemies){ circleOutline(e.x,e.y,e.r,'#ffb782'); }
+      }
+
+      // Heals (Offline)
+      if(GAME_MODE==='OFFLINE'){
+        for(const h of S.heals){ circleOutline(h.x,h.y,h.r,'#82f3c6');
+          ctx.lineWidth=2; ctx.strokeStyle='rgba(14,17,22,.35)';
+          ctx.beginPath(); ctx.moveTo(h.x-h.r*0.5,h.y); ctx.lineTo(h.x+h.r*0.5,h.y);
+          ctx.moveTo(h.x,h.y-h.r*0.5); ctx.lineTo(h.x,h.y+h.r*0.5); ctx.stroke(); }
+      }
+
+      // Player
+      const pa=ang(S.px,S.py,S.mouse.x,S.mouse.y);
+      ctx.save(); ctx.translate(S.px,S.py); ctx.rotate(pa);
+      const skin = getSkinById(currentSkinId);
+      glow('rgba(124,184,255,.35)',12);
+      ctx.fillStyle=skin.colors[0]; ctx.beginPath(); ctx.arc(0,0,S.pr,0,Math.PI*2); ctx.fill();
+      noGlow(); ctx.lineWidth=2; ctx.strokeStyle='rgba(14,17,22,.25)'; ctx.stroke();
+      // cannon (glasiger Stab)
+      glow('rgba(124,184,255,.25)',6);
+      ctx.strokeStyle='rgba(124,184,255,.75)'; ctx.lineWidth=8; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(S.pr+16,0); ctx.stroke();
+      noGlow();
+      ctx.restore();
+
+      RAF=requestAnimationFrame(loop);
+    }
+    RAF=requestAnimationFrame(loop);
+  }
+
+  // ======= GAME OVER =======
+  function gameOver(){
+    S.run=false;
+    ctx.fillStyle="rgba(14,17,22,.15)"; ctx.fillRect(0,0,innerWidth,innerHeight);
+    ctx.fillStyle="#0e1116"; ctx.font="900 32px Arial"; ctx.textAlign="center";
+    ctx.fillText("GAME OVER", innerWidth/2, innerHeight/2-18);
+    ctx.font="16px Arial";
+    if(isMobile){
+      ctx.fillText("Tippe zum Neustart", innerWidth/2, innerHeight/2+18);
+      const handler=()=>{ removeEventListener('touchstart',handler); resetGame(); startGame(); };
+      addEventListener('touchstart', handler, {once:true, passive:true});
+    } else {
+      ctx.fillText("Leertaste für Neustart • ESC/Verlassen zur Lobby", innerWidth/2, innerHeight/2+22);
+      const keyHandler=(e)=>{ if(e.code==='Space'){ removeEventListener('keydown',keyHandler); resetGame(); startGame(); } };
+      addEventListener('keydown', keyHandler, {once:true});
     }
   }
-  if(killed){ updateHUD(); autosaveKick(); }
 
-  // Enemy -> player (zuverlässiger Schaden + i-frames + Pushback)
-  if(S.hitCD>0) S.hitCD -= dt;
-  for(const e of S.enemies){
-    const dx=e.x-S.p.x, dy=e.y-S.p.y;
-    const d2 = dx*dx + dy*dy;
-    if(d2 < 32*32 && S.hitCD<=0){        // großzügigerer Radius = 32px
-      S.p.hp = Math.max(0, S.p.hp-1);    // 1 Herz
-      S.hitCD = 0.6;                     // 600ms Unverwundbarkeit
-      const d = Math.hypot(dx,dy)||1;    // Gegner wegstoßen
-      e.x += (dx/d)*40; e.y += (dy/d)*40;
+  // ======= Skins initial zeichnen =======
+  function renderSkinChoices(){
+    skinList.innerHTML='';
+    const data = [
+      {id:'aqua',name:'Aqua'},{id:'red',name:'Red'},{id:'purple',name:'Purple'},{id:'gold',name:'Gold'},{id:'mint',name:'Mint'}
+    ];
+    for(const s of data){
+      const el = document.createElement('div');
+      const locked = !(INV.ownedSkins||{})[s.id];
+      el.className = `skin ${s.id} ${s.id===currentSkinId?'active':''} ${locked?'locked':''}`;
+      el.title = s.name;
+      el.innerHTML = '<div class="dot"></div>';
+      el.addEventListener('click', ()=>{
+        if(locked) return alert('Skin ist gesperrt. Im Shop freischalten.');
+        currentSkinId = s.id; localStorage.setItem(SKIN_KEY,currentSkinId);
+        [...skinList.children].forEach(c=>c.classList.remove('active'));
+        el.classList.add('active');
+      });
+      skinList.appendChild(el);
     }
   }
+  renderSkinChoices();
 
-  // Highscore
-  if(S.score > S.best) S.best = S.score;
+  // ======= Self-tests (Konsole) =======
+  (function runTests(){
+    const t=(name,fn)=>{ try{ fn(); console.log('✅', name);}catch(e){ console.error('❌', name, e);} };
 
-  // Spawning
-  S.nextSpawn-=dt;
-  if(S.nextSpawn<=0){
-    spawnEnemy();
-    if(Math.random()<0.2) spawnEnemy();
-    S.nextSpawn=K.spawnEvery;
-  }
+    t('Lobby zuerst sichtbar', ()=>{
+      if(getComputedStyle(menu).display==='none') throw new Error('Menu sollte sichtbar sein');
+      if(getComputedStyle(modePicker).display!=='none') throw new Error('ModePicker sollte versteckt sein');
+    });
+    t('ModePicker über Lobby', ()=>{
+      btnPlay.click();
+      if(getComputedStyle(modePicker).display==='none') throw new Error('ModePicker nicht sichtbar');
+      const ziPicker = parseInt(getComputedStyle(modePicker).zIndex||'0',10);
+      const ziMenu   = parseInt(getComputedStyle(menu).zIndex||'0',10);
+      if(!(ziPicker>ziMenu)) throw new Error('z-index falsch');
+      modeCancelBtn.click();
+    });
+    t('Online: keine KI-Spawns', ()=>{
+      const prev=GAME_MODE; GAME_MODE='ONLINE'; resetGame();
+      if(S.enemies.length!==0) throw new Error('Online sollte 0 Gegner haben');
+      const before = S.enemies.length; S.spawnT=0; for(let i=0;i<10;i++) spawnEnemy();
+      if(S.enemies.length!==before) throw new Error('spawnEnemy sollte in Online nichts tun');
+      GAME_MODE=prev;
+    });
+    t('Leave-Button blendet in Lobby zurück', ()=>{
+      const prev=GAME_MODE; GAME_MODE='OFFLINE'; startFromLobby();
+      btnLeave.click();
+      if(getComputedStyle(menu).display==='none') throw new Error('Menu sollte sichtbar sein');
+      GAME_MODE=prev;
+    });
+    console.log('✅ Neo‑Cartoon‑Glass Style aktiv');
+  })();
 
-  // Camera follow
-  const tx=clamp(S.p.x-canvas.width/2,0,K.worldW-canvas.width);
-  const ty=clamp(S.p.y-canvas.height/2,0,K.worldH-canvas.height);
-  S.cam.x += (tx-S.cam.x)*0.18;
-  S.cam.y += (ty-S.cam.y)*0.18;
-
-  // Autosave
-  autosaveT += dt;
-  if(autosaveT > 5){ saveGame(); autosaveT = 0; }
-
-  updateHUD();
-  if(S.p.hp<=0 && !S.over){
-    S.over=true;
-    byId('center').style.display='block';
-    saveGame();
-  }
-}
-
-/* ===== Draw ===== */
-function draw(){
-  const w=canvas.width,h=canvas.height,cam=S.cam;
-  g.clearRect(0,0,w,h);
-
-  g.save(); g.translate(-cam.x,-cam.y);
-
-  // Grid
-  g.globalAlpha=.25; g.strokeStyle='#1b2130'; g.lineWidth=1; g.beginPath();
-  for(let x=0;x<=K.worldW;x+=64){ g.moveTo(x,0); g.lineTo(x,K.worldH); }
-  for(let y=0;y<=K.worldH;y+=64){ g.moveTo(0,y); g.lineTo(K.worldW,y); }
-  g.stroke(); g.globalAlpha=1;
-
-  // Enemies
-  g.fillStyle='#ef4444';
-  for(const e of S.enemies){ g.beginPath(); g.arc(e.x,e.y,14,0,Math.PI*2); g.fill(); }
-
-  // Player
-  g.fillStyle='#60a5fa'; g.beginPath(); g.arc(S.p.x,S.p.y,16,0,Math.PI*2); g.fill();
-
-  // Bullets
-  g.fillStyle='#fde047';
-  for(const b of S.bullets){ g.beginPath(); g.arc(b.x,b.y,4,0,Math.PI*2); g.fill(); }
-
-  // Schuss-Vorschau beim rechten Stick (nur mobile, während Halten)
-  if(isTouch && shootStick.active){
-    const ang=Math.atan2(shootStick.vec.y, shootStick.vec.x);
-    const len=110;
-    g.strokeStyle='#ffffff'; g.globalAlpha=.85; g.lineWidth=2;
-    g.beginPath(); g.moveTo(S.p.x, S.p.y); g.lineTo(S.p.x + Math.cos(ang)*len, S.p.y + Math.sin(ang)*len); g.stroke();
-    g.globalAlpha=1;
-  }
-
-  g.restore();
-
-  // Cursor ring (PC)
-  g.save(); g.strokeStyle='#fff'; g.globalAlpha=.9; g.lineWidth=2; g.beginPath();
-  g.arc(mouse.x,mouse.y,9,0,Math.PI*2); g.stroke(); g.restore();
-}
-
-/* ===== HUD ===== */
-function updateHUD(){
-  byId('score').textContent=S.score|0;
-  byId('best').textContent=S.best|0;
-  byId('coins').textContent=S.coins|0;
-  byId('weaponName').textContent=getW(S.p.weapon).name;
-  coinsShop.textContent=S.coins|0;
-  bestShop.textContent=S.best|0;
-  const hearts=byId('hearts'); hearts.innerHTML='';
-  for(let i=0;i<K.playerMaxHP;i++){
-    const h=document.createElement('div'); h.className='heart'+(i<S.p.hp?'':' off'); hearts.appendChild(h);
-  }
-}
-function autosaveKick(){ autosaveT = Math.min(autosaveT, 4.5); }
-
-/* ===== Loop & Restart Shortcuts ===== */
-let last=performance.now();
-function tick(now){ const dt=Math.min(.033,(now-last)/1000); last=now; update(dt); draw(); requestAnimationFrame(tick); }
-requestAnimationFrame(tick);
-
-// Neustart per Klick/Touch im Game-Over
-addEventListener('pointerdown', ()=>{ if(S.over) resetGame(); });
+  // Expose for debug
+  window._INV = ()=>JSON.parse(localStorage.getItem(INV_KEY)||'{}');
 
 })();
 </script>
